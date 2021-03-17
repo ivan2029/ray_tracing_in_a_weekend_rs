@@ -1,7 +1,43 @@
+use std::f32::consts::{PI, FRAC_1_PI};
 use auto_ops::{impl_op_ex, impl_op_ex_commutative};
 
+//
+//
+//
+const FRAC_1_180: f32 = 1.0 / 180.0;
+
+#[derive(Debug, Clone, Copy)]
+#[repr(transparent)]
+pub struct Radians(pub f32);
+
+impl Into<Degrees> for Radians {
+    fn into(self) -> Degrees {
+        Degrees( FRAC_1_PI * 180.0 * self.0)
+    }
+}
+
+impl_op_ex!(+ |a: Radians, b: Radians| -> Radians { Radians(a.0 + b.0) });
+impl_op_ex!(- |a: Radians, b: Radians| -> Radians { Radians(a.0 - b.0) });
+
+#[derive(Debug, Clone, Copy)]
+#[repr(transparent)]
+pub struct Degrees(pub f32);
+
+impl Into<Radians> for Degrees {
+    fn into(self) -> Radians {
+        Radians(PI * FRAC_1_180 * self.0)
+    }
+}
+
+impl_op_ex!(+ |a: Degrees, b: Degrees| -> Degrees { Degrees(a.0 + b.0) });
+impl_op_ex!(- |a: Degrees, b: Degrees| -> Degrees { Degrees(a.0 - b.0) });
+
+//
+//
+//
+
 ///
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,
@@ -147,7 +183,11 @@ pub struct Color {
 impl Color {
 
     pub fn from_rgb(r: f32, g: f32, b: f32) -> Color {
-        Color { r, g, b }
+        Color { 
+            r: r.clamp(0.0, 1.0), 
+            g: g.clamp(0.0, 1.0), 
+            b: b.clamp(0.0, 1.0), 
+        }
     }
 
     pub fn as_u8(&self) -> [u8; 3] {
@@ -168,9 +208,9 @@ impl Into<Vec3> for Color {
 impl From<Vec3> for Color {
     fn from(components: Vec3) -> Color {
         Color { 
-            r: components.x,
-            g: components.y,
-            b: components.z,
+            r: components.x.clamp(0.0, 1.0),
+            g: components.y.clamp(0.0, 1.0),
+            b: components.z.clamp(0.0, 1.0),
         }
     }
 }
@@ -179,7 +219,7 @@ impl From<Vec3> for Color {
 //
 //
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Hit {
     pub point: Vec3,
     pub normal: Vec3,
@@ -188,7 +228,7 @@ pub struct Hit {
 
 
 pub trait Hittable {
-    fn hit(&self, ray: &Ray) -> Option<Hit>;
+    fn hit(&self, ray: &Ray, near: f32, far: f32) -> Option<Hit>;
 }
 
 //
@@ -201,14 +241,14 @@ pub struct Sphere {
 }
 
 impl Hittable for Sphere {
-    fn hit(&self, ray: &Ray) -> Option<Hit> {
+    fn hit(&self, ray: &Ray, near: f32, far: f32) -> Option<Hit> {
         let center_origin = ray.origin() - &self.center;
 
         let a = ray.direction().norm_squared();
-        let b = 2.0 * Vec3::dot(&center_origin, ray.direction());
+        let half_b = Vec3::dot(&center_origin, ray.direction());
         let c = center_origin.norm_squared() - self.radius * self.radius;
     
-        let d = b * b - 4.0 * a * c;
+        let d = half_b * half_b -  a * c;
     
         if d < 0.0 {
             return None;
@@ -216,14 +256,18 @@ impl Hittable for Sphere {
     
         let d = d.sqrt();
 
-        let t1 = (- b - d) / (2.0 * a);
-        let t2 = (- b + d) / (2.0 * a);
+        let t1 = (- half_b - d) / a;
+        let t2 = (- half_b + d) / a;
         let t = match (t1 > 0.0, t2 > 0.0) {
             (true, true) => f32::min(t1, t2),
             (true, false) => t1,
             (false, true) => t2,
             _ => return None
         };
+
+        if !(near < t && t < far) {
+            return None;
+        } 
 
         let point = ray.at(t);
         let normal = (&point - &self.center).normalized();
@@ -235,3 +279,7 @@ impl Hittable for Sphere {
         })
     }
 }
+
+//
+//
+//
