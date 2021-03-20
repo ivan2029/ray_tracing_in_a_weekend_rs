@@ -1,5 +1,64 @@
-use std::f32::consts::{PI, FRAC_1_PI};
+use std::{
+    f32::consts::{PI, FRAC_1_PI},
+    ops::Range,
+};
 use auto_ops::{impl_op_ex, impl_op_ex_commutative};
+use rand::{Rng, thread_rng};
+
+//
+//
+//
+macro_rules! impl_norms {
+    ($vt:tt) => {
+        ///
+        pub fn norm_squared(&self) -> f32 {
+            self.dot(self)
+        }
+
+        ///
+        pub fn norm(&self) -> f32 {
+            self.norm_squared().sqrt()
+        }
+
+        ///
+        pub fn normalized(&self) -> Vec3 {
+            self / self.norm()
+        }
+    }
+}
+
+macro_rules! impl_interpolation {
+    ($vt:tt) => {
+        ///
+        pub fn lerp(t: f32, u: &$vt, v: &$vt) -> $vt {
+            (1.0 - t) * u + t * v
+        }
+
+        ///
+        pub fn quadratic(t: f32, a: &$vt, b: &$vt, c: &$vt) -> $vt {
+            // let ab = lerp(t, a, b);
+            // let bc = lerp(t, b, c);
+            // lerp(t, &ab, &bc)
+            let one_m_t = 1.0 - t;
+            (one_m_t * one_m_t) * a + (2.0 * one_m_t * t) * b + (t * t) * c
+        }
+
+        ///
+        pub fn cubic(t: f32, a: &$vt, b: &$vt, c: &$vt, d: &$vt) -> $vt {
+            // let ab = lerp(t, a, b);
+            // let bc = lerp(t, b, c);
+            // let cd = lerp(t, c, d);
+            // let abc = lerp(t, &ab, &bc);
+            // let bcd = lerp(t, &bc, &cd);
+            // lerp(t, &abc, &bcd)
+            let one_m_t = 1.0 - t;
+            (one_m_t * one_m_t * one_m_t) * a
+            + (3.0 * one_m_t * one_m_t * t) * b
+            + (3.0 * one_m_t * t * t) * c
+            + (t * t * t) * d
+        }
+    }
+}
 
 //
 //
@@ -66,24 +125,39 @@ impl Vec3 {
         }
     }
 
+    impl_norms!(Self);
+    impl_interpolation!(Self);
+
     ///
-    pub fn norm_squared(&self) -> f32 {
-        self.dot(self)
+    pub fn random() -> Vec3 {
+        Vec3::new(
+            thread_rng().gen(), 
+            thread_rng().gen(), 
+            thread_rng().gen(),
+        )
     }
 
     ///
-    pub fn norm(&self) -> f32 {
-        self.norm_squared().sqrt()
+    pub fn random_range(r: Range<f32>) -> Vec3 {
+        Vec3::new(
+            thread_rng().gen_range(r.clone()), 
+            thread_rng().gen_range(r.clone()), 
+            thread_rng().gen_range(r),
+        )
     }
 
     ///
-    pub fn normalized(&self) -> Vec3 {
-        self / self.norm()
+    pub fn random_in_unit_sphere() -> Vec3 {
+        let mut v = Vec3::random_range(-1.0 .. 1.0);
+        while v.norm_squared() > 1.0 {
+            v = Vec3::random_range(-1.0 .. 1.0);
+        }
+        v
     }
 
     ///
-    pub fn lerp(&self, v: &Vec3, t: f32) -> Vec3 {
-        (1.0 - t) * self + t * v
+    pub fn random_unit_vector() -> Vec3 {
+        Vec3::random_in_unit_sphere().normalized()
     }
 
 }
@@ -175,9 +249,9 @@ impl Ray {
 //
 #[derive(Debug, Clone)]
 pub struct Color {
-    pub r: f32,
-    pub g: f32,
-    pub b: f32,
+    r: f32,
+    g: f32,
+    b: f32,
 }
 
 impl Color {
@@ -197,6 +271,18 @@ impl Color {
             (self.b * 255.0) as u8,
         ]
     }
+
+    pub fn r(&self) -> f32 {
+        self.r
+    }
+
+    pub fn g(&self) -> f32 {
+        self.g
+    }
+
+    pub fn b(&self) -> f32 {
+        self.b
+    }
 }
 
 impl Into<Vec3> for Color {
@@ -215,6 +301,26 @@ impl From<Vec3> for Color {
     }
 }
 
+impl_op_ex!(+ |a: &Color, b: &Color| -> Color {
+    Color::from_rgb(
+        a.r + b.r,
+        a.g + b.g,
+        a.b + b.b,
+    )
+});
+
+impl_op_ex!(- |a: &Color, b: &Color| -> Color {
+    Color::from_rgb(
+        a.r + b.r,
+        a.g + b.g,
+        a.b + b.b,
+    )
+});
+
+impl_op_ex_commutative!(* |c: f32, a: &Color| -> Color {
+    Color::from_rgb(c * a.r, c * a.g, c * a.b)
+});
+
 //
 //
 //
@@ -224,10 +330,11 @@ pub struct Hit {
     pub point: Vec3,
     pub normal: Vec3,
     pub t: f32,
+    // pub material_id: usize,
 }
 
 
-pub trait Hittable {
+pub trait Hittable : Sync + Send {
     fn hit(&self, ray: &Ray, near: f32, far: f32) -> Option<Hit>;
 }
 
@@ -283,3 +390,23 @@ impl Hittable for Sphere {
 //
 //
 //
+// #[derive(Debug, Clone)]
+// pub struct Scatter {
+//     pub attenuation: Color,
+//     pub ray: Ray,
+// }
+
+// pub trait Material {
+//     fn scatter(&self, ray_in: &Ray, hit: &Hit, attenuation: &Color) -> Option<Scatter>;    
+// }
+
+// //
+// //
+// //
+// pub struct World {
+//     shapes: Vec<Box<dyn Hittable>>,
+//     materials: Vec<Box<dyn Material>>,
+// }
+
+
+
