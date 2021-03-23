@@ -2,7 +2,6 @@ use crate::cgmath::Vec3;
 
 use auto_ops::{impl_op_ex, impl_op_ex_commutative};
 
-
 #[derive(Debug, Clone)]
 pub struct Color {
     r: f32,
@@ -11,12 +10,11 @@ pub struct Color {
 }
 
 impl Color {
-
     pub fn from_rgb(r: f32, g: f32, b: f32) -> Color {
-        Color { 
-            r: r.clamp(0.0, 1.0), 
-            g: g.clamp(0.0, 1.0), 
-            b: b.clamp(0.0, 1.0), 
+        Color {
+            r: r.clamp(0.0, 1.0),
+            g: g.clamp(0.0, 1.0),
+            b: b.clamp(0.0, 1.0),
         }
     }
 
@@ -49,7 +47,7 @@ impl Into<Vec3> for Color {
 
 impl From<Vec3> for Color {
     fn from(components: Vec3) -> Color {
-        Color { 
+        Color {
             r: components.x.clamp(0.0, 1.0),
             g: components.y.clamp(0.0, 1.0),
             b: components.z.clamp(0.0, 1.0),
@@ -65,14 +63,8 @@ impl_op_ex!(+ |a: &Color, b: &Color| -> Color {
     )
 });
 
-impl_op_ex!(- |a: &Color, b: &Color| -> Color {
-    Color::from_rgb(
-        a.r + b.r,
-        a.g + b.g,
-        a.b + b.b,
-    )
-});
+impl_op_ex!(-|a: &Color, b: &Color| -> Color { Color::from_rgb(a.r + b.r, a.g + b.g, a.b + b.b,) });
 
-impl_op_ex_commutative!(* |c: f32, a: &Color| -> Color {
+impl_op_ex_commutative!(*|c: f32, a: &Color| -> Color {
     Color::from_rgb(c * a.r, c * a.g, c * a.b)
 });

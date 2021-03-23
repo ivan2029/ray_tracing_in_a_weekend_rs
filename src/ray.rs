@@ -1,5 +1,7 @@
 use crate::cgmath::Vec3;
 
+use std::fmt::Debug;
+
 //
 //
 //
@@ -8,10 +10,9 @@ use crate::cgmath::Vec3;
 pub struct Ray {
     origin: Vec3,
     direction: Vec3,
-} 
+}
 
 impl Ray {
-
     pub fn new(origin: Vec3, direction: Vec3) -> Ray {
         let direction = direction.normalized();
         Ray { origin, direction }
@@ -28,7 +29,6 @@ impl Ray {
     pub fn at(&self, t: f32) -> Vec3 {
         &self.origin + t * &self.direction
     }
-
 }
 
 //
@@ -41,7 +41,6 @@ pub struct ShapeHit {
     pub t: f32,
 }
 
-
-pub trait HittableShape : Sync + Send {
+pub trait HittableShape: Sync + Send + Debug {
     fn hit(&self, ray: &Ray, near: f32, far: f32) -> Option<ShapeHit>;
 }

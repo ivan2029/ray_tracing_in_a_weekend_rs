@@ -1,9 +1,9 @@
+use auto_ops::{impl_op_ex, impl_op_ex_commutative};
+use rand::{thread_rng, Rng};
 use std::{
-    f32::consts::{PI, FRAC_1_PI},
+    f32::consts::{FRAC_1_PI, PI},
     ops::Range,
 };
-use auto_ops::{impl_op_ex, impl_op_ex_commutative};
-use rand::{Rng, thread_rng};
 
 //
 //
@@ -24,7 +24,7 @@ macro_rules! impl_norms {
         pub fn normalized(&self) -> Vec3 {
             self / self.norm()
         }
-    }
+    };
 }
 
 macro_rules! impl_interpolation {
@@ -53,11 +53,11 @@ macro_rules! impl_interpolation {
             // lerp(t, &abc, &bcd)
             let one_m_t = 1.0 - t;
             (one_m_t * one_m_t * one_m_t) * a
-            + (3.0 * one_m_t * one_m_t * t) * b
-            + (3.0 * one_m_t * t * t) * c
-            + (t * t * t) * d
+                + (3.0 * one_m_t * one_m_t * t) * b
+                + (3.0 * one_m_t * t * t) * c
+                + (t * t * t) * d
         }
-    }
+    };
 }
 
 //
@@ -71,12 +71,12 @@ pub struct Radians(pub f32);
 
 impl Into<Degrees> for Radians {
     fn into(self) -> Degrees {
-        Degrees( FRAC_1_PI * 180.0 * self.0)
+        Degrees(FRAC_1_PI * 180.0 * self.0)
     }
 }
 
 impl_op_ex!(+ |a: Radians, b: Radians| -> Radians { Radians(a.0 + b.0) });
-impl_op_ex!(- |a: Radians, b: Radians| -> Radians { Radians(a.0 - b.0) });
+impl_op_ex!(-|a: Radians, b: Radians| -> Radians { Radians(a.0 - b.0) });
 
 #[derive(Debug, Clone, Copy)]
 #[repr(transparent)]
@@ -89,7 +89,7 @@ impl Into<Radians> for Degrees {
 }
 
 impl_op_ex!(+ |a: Degrees, b: Degrees| -> Degrees { Degrees(a.0 + b.0) });
-impl_op_ex!(- |a: Degrees, b: Degrees| -> Degrees { Degrees(a.0 - b.0) });
+impl_op_ex!(-|a: Degrees, b: Degrees| -> Degrees { Degrees(a.0 - b.0) });
 
 //
 //
@@ -103,12 +103,10 @@ pub struct Vec3 {
     pub z: f32,
 }
 
-
 impl Vec3 {
-
     ///
     pub const fn new(x: f32, y: f32, z: f32) -> Vec3 {
-        Vec3 {x, y, z}
+        Vec3 { x, y, z }
     }
 
     ///
@@ -120,7 +118,7 @@ impl Vec3 {
     pub fn cross(&self, other: &Vec3) -> Vec3 {
         Vec3 {
             x: self.y * other.z - self.z * other.y,
-            y: self.z * other.x - self.x * other.z, 
+            y: self.z * other.x - self.x * other.z,
             z: self.x * other.y - self.y * other.x,
         }
     }
@@ -129,28 +127,30 @@ impl Vec3 {
     impl_interpolation!(Self);
 
     ///
+    pub fn near_zero(&self) -> bool {
+        let precision = 1e-8;
+        self.x.abs() < precision && self.y.abs() < precision && self.z.abs() < precision
+    }
+
+    ///
     pub fn random() -> Vec3 {
-        Vec3::new(
-            thread_rng().gen(), 
-            thread_rng().gen(), 
-            thread_rng().gen(),
-        )
+        Vec3::new(thread_rng().gen(), thread_rng().gen(), thread_rng().gen())
     }
 
     ///
     pub fn random_range(r: Range<f32>) -> Vec3 {
         Vec3::new(
-            thread_rng().gen_range(r.clone()), 
-            thread_rng().gen_range(r.clone()), 
+            thread_rng().gen_range(r.clone()),
+            thread_rng().gen_range(r.clone()),
             thread_rng().gen_range(r),
         )
     }
 
     ///
     pub fn random_in_unit_sphere() -> Vec3 {
-        let mut v = Vec3::random_range(-1.0 .. 1.0);
+        let mut v = Vec3::random_range(-1.0..1.0);
         while v.norm_squared() > 1.0 {
-            v = Vec3::random_range(-1.0 .. 1.0);
+            v = Vec3::random_range(-1.0..1.0);
         }
         v
     }
@@ -160,45 +160,60 @@ impl Vec3 {
         Vec3::random_in_unit_sphere().normalized()
     }
 
+    ///
+    pub fn random_in_hemisphere(normal: &Vec3) -> Vec3 {
+        let u = Vec3::random_unit_vector();
+        if Vec3::dot(&u, normal) > 0.0 {
+            u
+        } else {
+            -u
+        }
+    }
 }
 
 // constants
 impl Vec3 {
-
     ///
     pub const X: Vec3 = Vec3::new(1.0, 0.0, 0.0);
-    
+
     ///
     pub const Y: Vec3 = Vec3::new(0.0, 1.0, 0.0);
-    
+
     ///
     pub const Z: Vec3 = Vec3::new(0.0, 0.0, 1.0);
-    
+
     ///
     pub const ZERO: Vec3 = Vec3::new(0.0, 0.0, 0.0);
-    
+
     ///
     pub const ONE: Vec3 = Vec3::new(1.0, 1.0, 1.0);
-
 }
 
-impl_op_ex!(+ |u: &Vec3, v: &Vec3| -> Vec3 { 
-    Vec3 { 
+impl_op_ex!(-|u: &Vec3| -> Vec3 {
+    Vec3 {
+        x: -u.x,
+        y: -u.y,
+        z: -u.z,
+    }
+});
+
+impl_op_ex!(+ |u: &Vec3, v: &Vec3| -> Vec3 {
+    Vec3 {
         x: u.x + v.x,
         y: u.y + v.y,
         z: u.z + v.z,
     }
 });
 
-impl_op_ex!(- |u: &Vec3, v: &Vec3| -> Vec3 { 
-    Vec3 { 
+impl_op_ex!(-|u: &Vec3, v: &Vec3| -> Vec3 {
+    Vec3 {
         x: u.x - v.x,
         y: u.y - v.y,
         z: u.z - v.z,
     }
 });
 
-impl_op_ex_commutative!(* |u: &Vec3, c: f32| -> Vec3 {
+impl_op_ex_commutative!(*|u: &Vec3, c: f32| -> Vec3 {
     Vec3 {
         x: u.x * c,
         y: u.y * c,
@@ -208,7 +223,7 @@ impl_op_ex_commutative!(* |u: &Vec3, c: f32| -> Vec3 {
 
 impl_op_ex!(/ |u: &Vec3, c: f32| -> Vec3 {
     Vec3 {
-        x: u.x / c, 
+        x: u.x / c,
         y: u.y / c,
         z: u.z / c,
     }

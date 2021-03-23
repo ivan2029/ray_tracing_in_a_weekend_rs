@@ -1,23 +1,24 @@
 mod cgmath;
-mod ray;
 mod color;
-mod shape;
 mod material;
+mod ray;
+mod raytrace;
 mod scene;
-
-mod playground;
+mod shape;
 
 use crate::cgmath::*;
-use crate::ray::*;
 use crate::color::*;
-use crate::shape::*;
 use crate::material::*;
+use crate::ray::*;
+use crate::raytrace::*;
 use crate::scene::*;
-
-use playground::*;
+use crate::shape::*;
 
 use anyhow::Result;
+use image::{ImageBuffer, Rgb};
 use rayon::prelude::*;
+
+use std::{sync::mpsc, thread};
 
 fn main() -> Result<()> {
     // image
@@ -33,72 +34,73 @@ fn main() -> Result<()> {
     let origin = Vec3::ZERO;
     let horizontal = viewport_width * &Vec3::X;
     let vertical = viewport_height * &Vec3::Y;
-    let lower_left_corner 
-        = &origin 
-        - 0.5 * &horizontal 
-        - 0.5 * &vertical 
-        - focal_length * &Vec3::Z;
+    let lower_left_corner = &origin - 0.5 * &horizontal - 0.5 * &vertical - focal_length * &Vec3::Z;
 
     // raytrace options
     let ray_cast_options = RayCastOptions {
         sample_count: 100,
-        max_depth: 5,
+        max_depth: 100,
     };
 
     // scene
-    let scene: Vec<Box<dyn HittableShape>> = vec![
-        Box::new(
-            Sphere {
-                center: -1.0 * &Vec3::Z,
-                radius: 0.5
-            }
-        ),
-        Box::new(
-            Sphere {
-                center: Vec3::new(0.0, -100.5,  -1.0),
-                radius: 100.0
-            }
-        ),
-    ];
+    let scene = make_test_scene();
 
-    let scene_iter = scene.iter()
-        .map(|b| b.as_ref());
+    // log thread
+    let (tx, rx) = mpsc::channel();
+
+    thread::spawn(move || {
+        let mut rows = vec![0; image_height as usize];
+        let mut rows_completed = 0;
+
+        while let Ok(row) = rx.recv() {
+            rows[row] += 1;
+            if rows[row] == image_width {
+                rows_completed += 1;
+                println!("finished rows {}", rows_completed);
+            }
+        }
+    });
 
     // raytrace
-    let mut buf = image::ImageBuffer::new(image_width, image_height);
+    let mut buf: ImageBuffer<Rgb<u8>, Vec<u8>> = ImageBuffer::new(image_width, image_height);
 
-    let mut last_y = std::u32::MAX;
-    for (x, y, pixel) in buf.enumerate_pixels_mut() {
-        if last_y != y {
-            last_y = y;
-            println!("starting row {} of {}", y + 1, image_height);
-        }
+    buf.par_chunks_exact_mut(3)
+        .enumerate()
+        .for_each_with(tx, |tx, (pos, pixel)| {
+            let x = pos as u32 % image_width;
+            let y = pos as u32 / image_width;
 
-        let u = x as f32 / (image_width - 1) as f32;
-        let v = 1.0 - (y as f32 / (image_height - 1) as f32);
+            let u = x as f32 / (image_width - 1) as f32;
+            let v = 1.0 - (y as f32 / (image_height - 1) as f32);
 
-        let comps = (0 .. ray_cast_options.sample_count).into_par_iter()
-            .map(|_| {
-                use rand::Rng;
-                let du = rand::thread_rng().gen_range(-0.5 .. 0.5) / image_width as f32;
-                let dv = rand::thread_rng().gen_range(-0.5 .. 0.5) / image_height as f32;
+            let comps = (0..ray_cast_options.sample_count)
+                .into_iter()
+                .map(|_| {
+                    use rand::Rng;
+                    let du = rand::thread_rng().gen_range(-0.5..0.5) / image_width as f32;
+                    let dv = rand::thread_rng().gen_range(-0.5..0.5) / image_height as f32;
 
-                let ray = Ray::new(
-                    origin.clone(),
-                    &lower_left_corner 
-                    + (u + du) * &horizontal 
-                    + (v + dv) * &vertical - &origin
-                );
+                    let ray = Ray::new(
+                        origin.clone(),
+                        &lower_left_corner + (u + du) * &horizontal + (v + dv) * &vertical
+                            - &origin,
+                    );
 
-                let comps: Vec3 = ray_color(&ray_cast_options, scene_iter.clone(), &ray, 0).into();
-                comps  
-            })
-            .reduce(|| Vec3::ZERO, |a, b| &a + &b);
-        let color: Color = (&comps / ray_cast_options.sample_count as f32).into();
+                    let comps: Vec3 = ray_color(&ray_cast_options, &scene, &ray, 0).into();
+                    comps
+                })
+                .fold(Vec3::ZERO, |a, b| &a + &b);
+            let color: Color = (&comps / ray_cast_options.sample_count as f32).into();
 
-        //
-        *pixel = image::Rgb(color.as_u8());
-    } 
+            //
+            let color = image::Rgb(color.as_u8());
+            pixel[0] = color.0[0];
+            pixel[1] = color.0[1];
+            pixel[2] = color.0[2];
+
+            //
+            tx.send(y as usize).unwrap();
+        });
 
     buf.save("target/test.png")?;
 
@@ -106,71 +108,43 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+//
+//
+//
+fn make_test_scene() -> Scene {
+    use crate::cgmath::*;
 
-fn background_color(ray: &Ray) -> Color {
-    let t = 0.5 * (ray.direction().y + 1.0); 
-    let cs = Vec3::lerp(t, &Vec3::ONE, &Vec3::new(0.5, 0.7, 1.0));
-    cs.into()
-}
+    let mut scene = Scene::new();
 
-fn nearest_hit<'a, I>(it: I, ray: &Ray, near: f32, far: f32) -> Option<ShapeHit> 
-    where I: Iterator<Item=&'a dyn HittableShape>
-{
-    let inf_hit = ShapeHit {
-        t: f32::INFINITY,
-        .. Default::default()
-    };
+    let grey_diffuse = scene.insert_material(Lambertian::new(Color::from_rgb(0.5, 0.5, 0.5)));
 
-    fn choose_nearer(a: ShapeHit, b: ShapeHit) -> ShapeHit {
-        if a.t < b.t {
-            a
-        } else {
-            b
-        }
-    }
+    let green_metal = scene.insert_material(Metal::new(Color::from_rgb(0.0, 1.0, 0.0), 0.8));
+    let red_metal = scene.insert_material(Metal::new(Color::from_rgb(1.0, 0.0, 0.0), 0.2));
 
-    let hit = it.filter_map(|h| h.hit(ray, near, far))
-        .fold(inf_hit, choose_nearer);
+    let ground = scene.insert_shape(Sphere {
+        center: Vec3::new(0.0, -100.5, -1.0),
+        radius: 100.0,
+    });
 
-    if f32::is_infinite(hit.t) {
-        None
-    } else {
-        Some(hit)
-    }
-}
+    let s1 = scene.insert_shape(Sphere {
+        center: Vec3::new(0.0, 0.0, -1.0),
+        radius: 0.5,
+    });
 
-struct RayCastOptions {
-    sample_count: usize,
-    max_depth: usize,
-}
+    let s2 = scene.insert_shape(Sphere {
+        center: Vec3::new(1.0, 0.0, -1.0),
+        radius: 0.5,
+    });
 
-impl Default for RayCastOptions {
-    fn default() -> Self {
-        RayCastOptions {
-            sample_count: 50,
-            max_depth: 8,
-        }
-    }
-}
+    let s3 = scene.insert_shape(Sphere {
+        center: Vec3::new(-1.0, 0.0, -1.0),
+        radius: 0.5,
+    });
 
+    scene.insert_object(ground, grey_diffuse);
+    scene.insert_object(s1, grey_diffuse);
+    scene.insert_object(s2, green_metal);
+    scene.insert_object(s3, red_metal);
 
-fn ray_color<'a, I>(options: &RayCastOptions, hittables: I, ray: &Ray, ray_depth: usize) -> Color 
-    where I: Iterator<Item=&'a dyn HittableShape> + Clone
-{
-    if ray_depth > options.max_depth {
-        return Color::from_rgb(0.0, 0.0, 0.0);
-    }
-
-    let ohit = nearest_hit(hittables.clone(), ray, 0.001, 100.0);
-
-    match ohit {
-        Some(hit) => {
-            let target = &hit.point + &hit.normal + &Vec3::random_unit_vector();
-            let target_ray = Ray::new(hit.point.clone(), &target - &hit.point);
-            let target_color = ray_color(options, hittables, &target_ray, ray_depth + 1);
-        
-            0.5 * target_color  
-        },
-        None => background_color(ray)
-    }
+    scene
 }
