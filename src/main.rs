@@ -1,4 +1,18 @@
+mod cgmath;
+mod ray;
+mod color;
+mod shape;
+mod material;
+mod scene;
+
 mod playground;
+
+use crate::cgmath::*;
+use crate::ray::*;
+use crate::color::*;
+use crate::shape::*;
+use crate::material::*;
+use crate::scene::*;
 
 use playground::*;
 
@@ -27,12 +41,12 @@ fn main() -> Result<()> {
 
     // raytrace options
     let ray_cast_options = RayCastOptions {
-        sample_count: 10,
-        max_depth: 10,
+        sample_count: 100,
+        max_depth: 5,
     };
 
     // scene
-    let scene: Vec<Box<dyn Hittable>> = vec![
+    let scene: Vec<Box<dyn HittableShape>> = vec![
         Box::new(
             Sphere {
                 center: -1.0 * &Vec3::Z,
@@ -99,15 +113,15 @@ fn background_color(ray: &Ray) -> Color {
     cs.into()
 }
 
-fn nearest_hit<'a, I>(it: I, ray: &Ray, near: f32, far: f32) -> Option<Hit> 
-    where I: Iterator<Item=&'a dyn Hittable>
+fn nearest_hit<'a, I>(it: I, ray: &Ray, near: f32, far: f32) -> Option<ShapeHit> 
+    where I: Iterator<Item=&'a dyn HittableShape>
 {
-    let inf_hit = Hit {
+    let inf_hit = ShapeHit {
         t: f32::INFINITY,
         .. Default::default()
     };
 
-    fn choose_nearer(a: Hit, b: Hit) -> Hit {
+    fn choose_nearer(a: ShapeHit, b: ShapeHit) -> ShapeHit {
         if a.t < b.t {
             a
         } else {
@@ -141,7 +155,7 @@ impl Default for RayCastOptions {
 
 
 fn ray_color<'a, I>(options: &RayCastOptions, hittables: I, ray: &Ray, ray_depth: usize) -> Color 
-    where I: Iterator<Item=&'a dyn Hittable> + Clone
+    where I: Iterator<Item=&'a dyn HittableShape> + Clone
 {
     if ray_depth > options.max_depth {
         return Color::from_rgb(0.0, 0.0, 0.0);
