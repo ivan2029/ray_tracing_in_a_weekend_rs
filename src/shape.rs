@@ -42,6 +42,13 @@ impl HittableShape for Sphere {
         let point = ray.at(t);
         let normal = (point - self.center).normalized();
 
-        Some(ShapeHit { point, normal, t })
+        let is_front_face = (self.center - *ray.origin()).norm() > self.radius;
+
+        Some(ShapeHit {
+            point,
+            normal,
+            t,
+            is_front_face,
+        })
     }
 }

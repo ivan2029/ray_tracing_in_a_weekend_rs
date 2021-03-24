@@ -80,5 +80,5 @@ impl Mul<Color> for f32 {
     type Output = Color;
     fn mul(self, c: Color) -> Color {
         c * self
-    }  
+    }
 }

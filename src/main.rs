@@ -23,7 +23,7 @@ use std::{sync::mpsc, thread};
 fn main() -> Result<()> {
     // image
     let aspect_ratio = 16.0 / 9.0;
-    let image_width = 800;
+    let image_width = 1000;
     let image_height = (image_width as f32 / aspect_ratio) as _;
 
     // camera
@@ -31,15 +31,15 @@ fn main() -> Result<()> {
     let viewport_width = aspect_ratio * viewport_height;
     let focal_length = 1.0;
 
-    let origin = Vec3::ZERO;
+    let origin = Vec3::Z * 0.25;
     let horizontal = viewport_width * Vec3::X;
     let vertical = viewport_height * Vec3::Y;
     let lower_left_corner = origin - 0.5 * horizontal - 0.5 * vertical - focal_length * Vec3::Z;
 
     // raytrace options
     let ray_cast_options = RayCastOptions {
-        sample_count: 10,
-        max_depth: 10,
+        sample_count: 100,
+        max_depth: 3,
     };
 
     // scene
@@ -81,9 +81,8 @@ fn main() -> Result<()> {
                     let dv = rand::thread_rng().gen_range(-0.5..0.5) / image_height as f32;
 
                     let ray = Ray::new(
-                        origin.clone(),
-                        lower_left_corner + (u + du) * horizontal + (v + dv) * vertical
-                            - origin,
+                        origin,
+                        lower_left_corner + (u + du) * horizontal + (v + dv) * vertical - origin,
                     );
 
                     let comps: Vec3 = ray_color(&ray_cast_options, &scene, &ray, 0).into();
@@ -132,7 +131,8 @@ fn make_test_scene() -> Scene {
 
     // center sphere
     {
-        let m = scene.insert_material(Lambertian::new(Color::from_rgb(0.7, 0.3, 0.3)));
+        let m = scene.insert_material(Lambertian::new(Color::from_rgb(0.1, 0.2, 0.5)));
+        // let m = scene.insert_material(Dielectric::new(1.5));
 
         let s = scene.insert_shape(Sphere {
             center: Vec3::new(0.0, 0.0, -1.0),
@@ -144,7 +144,8 @@ fn make_test_scene() -> Scene {
 
     // left sphere
     {
-        let m = scene.insert_material(Metal::new(Color::from_rgb(0.8, 0.8, 0.8), 0.3));
+        //let m = scene.insert_material(Metal::new(Color::from_rgb(0.8, 0.8, 0.8), 0.3));
+        let m = scene.insert_material(Dielectric::new(1.5));
 
         let s = scene.insert_shape(Sphere {
             center: Vec3::new(-1.0, 0.0, -1.0),

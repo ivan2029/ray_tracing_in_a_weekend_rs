@@ -28,7 +28,7 @@ pub fn ray_color(options: &RayCastOptions, scene: &Scene, ray: &Ray, ray_depth: 
         Some(hit) => {
             let mat = scene.get_material(hit.object);
 
-            let color = if let Some(scatter) = mat.scatter(ray, &hit.shape_hit) {
+            if let Some(scatter) = mat.scatter(ray, &hit.shape_hit) {
                 let in_color = ray_color(options, scene, &scatter.ray, ray_depth + 1);
                 Color::from_rgb(
                     scatter.attenuation.r() * in_color.r(),
@@ -37,9 +37,7 @@ pub fn ray_color(options: &RayCastOptions, scene: &Scene, ray: &Ray, ray_depth: 
                 )
             } else {
                 Color::from_rgb(0.0, 0.0, 0.0)
-            };
-
-            color
+            }
         }
         None => background_color(ray),
     }

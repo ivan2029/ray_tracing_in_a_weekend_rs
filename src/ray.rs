@@ -39,6 +39,7 @@ pub struct ShapeHit {
     pub point: Vec3,
     pub normal: Vec3,
     pub t: f32,
+    pub is_front_face: bool,
 }
 
 pub trait HittableShape: Sync + Send + Debug {

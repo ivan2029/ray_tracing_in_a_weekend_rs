@@ -1,5 +1,8 @@
 use rand::{thread_rng, Rng};
-use std::{f32::consts::{FRAC_1_PI, PI}, ops::{Add, Sub, Mul, Div, Neg, Range}};
+use std::{
+    f32::consts::{FRAC_1_PI, PI},
+    ops::{Add, Div, Mul, Neg, Range, Sub},
+};
 
 //
 //
