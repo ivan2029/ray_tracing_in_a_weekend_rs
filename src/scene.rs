@@ -4,6 +4,7 @@ use crate::ray::*;
 //
 //
 //
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ShapeId(usize);
 
@@ -16,6 +17,7 @@ pub struct ObjectId(usize);
 //
 //
 //
+
 #[derive(Debug, Clone)]
 struct Object {
     shape: ShapeId,
@@ -31,6 +33,7 @@ pub struct Hit {
 //
 //
 //
+
 #[derive(Debug)]
 pub struct Scene {
     shapes: Vec<Box<dyn HittableShape>>,

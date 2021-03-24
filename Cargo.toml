@@ -10,5 +10,5 @@ edition = "2018"
 anyhow = "1.0"
 rand = "0.8"
 rayon = "1.5"
-image = "0.23"
+image = { version = "0.23", features = ["png"] }
 
