@@ -47,6 +47,6 @@ pub fn ray_color(options: &RayCastOptions, scene: &Scene, ray: &Ray, ray_depth: 
 
 fn background_color(ray: &Ray) -> Color {
     let t = 0.5 * (ray.direction().y + 1.0);
-    let cs = Vec3::lerp(t, &Vec3::ONE, &Vec3::new(0.5, 0.7, 1.0));
+    let cs = Vec3::lerp(t, Vec3::ONE, Vec3::new(0.5, 0.7, 1.0));
     cs.into()
 }

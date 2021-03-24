@@ -12,10 +12,10 @@ pub struct Sphere {
 
 impl HittableShape for Sphere {
     fn hit(&self, ray: &Ray, near: f32, far: f32) -> Option<ShapeHit> {
-        let center_origin = ray.origin() - &self.center;
+        let center_origin = *ray.origin() - self.center;
 
         let a = ray.direction().norm_squared();
-        let half_b = Vec3::dot(&center_origin, ray.direction());
+        let half_b = Vec3::dot(center_origin, *ray.direction());
         let c = center_origin.norm_squared() - self.radius * self.radius;
 
         let d = half_b * half_b - a * c;
@@ -40,7 +40,7 @@ impl HittableShape for Sphere {
         }
 
         let point = ray.at(t);
-        let normal = (&point - &self.center).normalized();
+        let normal = (point - self.center).normalized();
 
         Some(ShapeHit { point, normal, t })
     }

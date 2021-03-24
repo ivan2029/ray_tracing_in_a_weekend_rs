@@ -1,8 +1,8 @@
+use std::ops::{Add, Mul, Sub};
+
 use crate::cgmath::Vec3;
 
-use auto_ops::{impl_op_ex, impl_op_ex_commutative};
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Color {
     r: f32,
     g: f32,
@@ -55,16 +55,30 @@ impl From<Vec3> for Color {
     }
 }
 
-impl_op_ex!(+ |a: &Color, b: &Color| -> Color {
-    Color::from_rgb(
-        a.r + b.r,
-        a.g + b.g,
-        a.b + b.b,
-    )
-});
+impl Add for Color {
+    type Output = Color;
+    fn add(self, other: Color) -> Color {
+        Color::from_rgb(self.r + other.r, self.g + other.g, self.b + other.b)
+    }
+}
 
-impl_op_ex!(-|a: &Color, b: &Color| -> Color { Color::from_rgb(a.r + b.r, a.g + b.g, a.b + b.b,) });
+impl Sub for Color {
+    type Output = Color;
+    fn sub(self, other: Color) -> Color {
+        Color::from_rgb(self.r - other.r, self.g - other.g, self.b - other.b)
+    }
+}
 
-impl_op_ex_commutative!(*|c: f32, a: &Color| -> Color {
-    Color::from_rgb(c * a.r, c * a.g, c * a.b)
-});
+impl Mul<f32> for Color {
+    type Output = Color;
+    fn mul(self, c: f32) -> Color {
+        Color::from_rgb(self.r * c, self.g * c, self.b * c)
+    }
+}
+
+impl Mul<Color> for f32 {
+    type Output = Color;
+    fn mul(self, c: Color) -> Color {
+        c * self
+    }  
+}

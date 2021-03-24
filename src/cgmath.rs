@@ -1,9 +1,5 @@
-use auto_ops::{impl_op_ex, impl_op_ex_commutative};
 use rand::{thread_rng, Rng};
-use std::{
-    f32::consts::{FRAC_1_PI, PI},
-    ops::Range,
-};
+use std::{f32::consts::{FRAC_1_PI, PI}, ops::{Add, Sub, Mul, Div, Neg, Range}};
 
 //
 //
@@ -11,17 +7,17 @@ use std::{
 macro_rules! impl_norms {
     ($vt:tt) => {
         ///
-        pub fn norm_squared(&self) -> f32 {
+        pub fn norm_squared(self) -> f32 {
             self.dot(self)
         }
 
         ///
-        pub fn norm(&self) -> f32 {
+        pub fn norm(self) -> f32 {
             self.norm_squared().sqrt()
         }
 
         ///
-        pub fn normalized(&self) -> Vec3 {
+        pub fn normalized(self) -> Vec3 {
             self / self.norm()
         }
     };
@@ -30,12 +26,12 @@ macro_rules! impl_norms {
 macro_rules! impl_interpolation {
     ($vt:tt) => {
         ///
-        pub fn lerp(t: f32, u: &$vt, v: &$vt) -> $vt {
+        pub fn lerp(t: f32, u: $vt, v: $vt) -> $vt {
             (1.0 - t) * u + t * v
         }
 
         ///
-        pub fn quadratic(t: f32, a: &$vt, b: &$vt, c: &$vt) -> $vt {
+        pub fn quadratic(t: f32, a: $vt, b: $vt, c: $vt) -> $vt {
             // let ab = lerp(t, a, b);
             // let bc = lerp(t, b, c);
             // lerp(t, &ab, &bc)
@@ -44,7 +40,7 @@ macro_rules! impl_interpolation {
         }
 
         ///
-        pub fn cubic(t: f32, a: &$vt, b: &$vt, c: &$vt, d: &$vt) -> $vt {
+        pub fn cubic(t: f32, a: $vt, b: $vt, c: $vt, d: $vt) -> $vt {
             // let ab = lerp(t, a, b);
             // let bc = lerp(t, b, c);
             // let cd = lerp(t, c, d);
@@ -75,8 +71,26 @@ impl Into<Degrees> for Radians {
     }
 }
 
-impl_op_ex!(+ |a: Radians, b: Radians| -> Radians { Radians(a.0 + b.0) });
-impl_op_ex!(-|a: Radians, b: Radians| -> Radians { Radians(a.0 - b.0) });
+impl Add for Radians {
+    type Output = Radians;
+    fn add(self, other: Radians) -> Radians {
+        Radians(self.0 + other.0)
+    }
+}
+
+impl Sub for Radians {
+    type Output = Radians;
+    fn sub(self, other: Radians) -> Radians {
+        Radians(self.0 - other.0)
+    }
+}
+
+impl Neg for Radians {
+    type Output = Radians;
+    fn neg(self) -> Radians {
+        Radians(-self.0)
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 #[repr(transparent)]
@@ -88,15 +102,33 @@ impl Into<Radians> for Degrees {
     }
 }
 
-impl_op_ex!(+ |a: Degrees, b: Degrees| -> Degrees { Degrees(a.0 + b.0) });
-impl_op_ex!(-|a: Degrees, b: Degrees| -> Degrees { Degrees(a.0 - b.0) });
+impl Add for Degrees {
+    type Output = Degrees;
+    fn add(self, other: Degrees) -> Degrees {
+        Degrees(self.0 + other.0)
+    }
+}
+
+impl Sub for Degrees {
+    type Output = Degrees;
+    fn sub(self, other: Degrees) -> Degrees {
+        Degrees(self.0 - other.0)
+    }
+}
+
+impl Neg for Degrees {
+    type Output = Degrees;
+    fn neg(self) -> Degrees {
+        Degrees(-self.0)
+    }
+}
 
 //
 //
 //
 
 ///
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,
@@ -110,12 +142,12 @@ impl Vec3 {
     }
 
     ///
-    pub fn dot(&self, other: &Vec3) -> f32 {
+    pub fn dot(self, other: Vec3) -> f32 {
         self.x * other.x + self.y * other.y + self.z * other.z
     }
 
     ///
-    pub fn cross(&self, other: &Vec3) -> Vec3 {
+    pub fn cross(self, other: Vec3) -> Vec3 {
         Vec3 {
             x: self.y * other.z - self.z * other.y,
             y: self.z * other.x - self.x * other.z,
@@ -127,9 +159,15 @@ impl Vec3 {
     impl_interpolation!(Self);
 
     ///
-    pub fn near_zero(&self) -> bool {
+    pub fn near_zero(self) -> bool {
         let precision = 1e-8;
         self.x.abs() < precision && self.y.abs() < precision && self.z.abs() < precision
+    }
+
+    ///
+    pub fn angle(self, other: Vec3) -> Radians {
+        let rads = self.dot(other) / (self.norm() * other.norm());
+        Radians(rads)
     }
 
     ///
@@ -161,9 +199,9 @@ impl Vec3 {
     }
 
     ///
-    pub fn random_in_hemisphere(normal: &Vec3) -> Vec3 {
+    pub fn random_in_hemisphere(normal: Vec3) -> Vec3 {
         let u = Vec3::random_unit_vector();
-        if Vec3::dot(&u, normal) > 0.0 {
+        if Vec3::dot(u, normal) > 0.0 {
             u
         } else {
             -u
@@ -189,42 +227,64 @@ impl Vec3 {
     pub const ONE: Vec3 = Vec3::new(1.0, 1.0, 1.0);
 }
 
-impl_op_ex!(-|u: &Vec3| -> Vec3 {
-    Vec3 {
-        x: -u.x,
-        y: -u.y,
-        z: -u.z,
+impl Neg for Vec3 {
+    type Output = Vec3;
+    fn neg(self) -> Vec3 {
+        Vec3 {
+            x: -self.x,
+            y: -self.y,
+            z: -self.z,
+        }
     }
-});
+}
 
-impl_op_ex!(+ |u: &Vec3, v: &Vec3| -> Vec3 {
-    Vec3 {
-        x: u.x + v.x,
-        y: u.y + v.y,
-        z: u.z + v.z,
+impl Add for Vec3 {
+    type Output = Vec3;
+    fn add(self, other: Vec3) -> Vec3 {
+        Vec3 {
+            x: self.x + other.x,
+            y: self.y + other.y,
+            z: self.z + other.z,
+        }
     }
-});
+}
 
-impl_op_ex!(-|u: &Vec3, v: &Vec3| -> Vec3 {
-    Vec3 {
-        x: u.x - v.x,
-        y: u.y - v.y,
-        z: u.z - v.z,
+impl Sub for Vec3 {
+    type Output = Vec3;
+    fn sub(self, other: Vec3) -> Vec3 {
+        Vec3 {
+            x: self.x - other.x,
+            y: self.y - other.y,
+            z: self.z - other.z,
+        }
     }
-});
+}
 
-impl_op_ex_commutative!(*|u: &Vec3, c: f32| -> Vec3 {
-    Vec3 {
-        x: u.x * c,
-        y: u.y * c,
-        z: u.z * c,
+impl Mul<f32> for Vec3 {
+    type Output = Vec3;
+    fn mul(self, c: f32) -> Vec3 {
+        Vec3 {
+            x: self.x * c,
+            y: self.y * c,
+            z: self.z * c,
+        }
     }
-});
+}
 
-impl_op_ex!(/ |u: &Vec3, c: f32| -> Vec3 {
-    Vec3 {
-        x: u.x / c,
-        y: u.y / c,
-        z: u.z / c,
+impl Mul<Vec3> for f32 {
+    type Output = Vec3;
+    fn mul(self, v: Vec3) -> Vec3 {
+        v * self
     }
-});
+}
+
+impl Div<f32> for Vec3 {
+    type Output = Vec3;
+    fn div(self, c: f32) -> Vec3 {
+        Vec3 {
+            x: self.x / c,
+            y: self.y / c,
+            z: self.z / c,
+        }
+    }
+}

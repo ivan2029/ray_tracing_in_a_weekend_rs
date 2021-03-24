@@ -32,14 +32,14 @@ fn main() -> Result<()> {
     let focal_length = 1.0;
 
     let origin = Vec3::ZERO;
-    let horizontal = viewport_width * &Vec3::X;
-    let vertical = viewport_height * &Vec3::Y;
-    let lower_left_corner = &origin - 0.5 * &horizontal - 0.5 * &vertical - focal_length * &Vec3::Z;
+    let horizontal = viewport_width * Vec3::X;
+    let vertical = viewport_height * Vec3::Y;
+    let lower_left_corner = origin - 0.5 * horizontal - 0.5 * vertical - focal_length * Vec3::Z;
 
     // raytrace options
     let ray_cast_options = RayCastOptions {
-        sample_count: 100,
-        max_depth: 100,
+        sample_count: 10,
+        max_depth: 10,
     };
 
     // scene
@@ -82,15 +82,18 @@ fn main() -> Result<()> {
 
                     let ray = Ray::new(
                         origin.clone(),
-                        &lower_left_corner + (u + du) * &horizontal + (v + dv) * &vertical
-                            - &origin,
+                        lower_left_corner + (u + du) * horizontal + (v + dv) * vertical
+                            - origin,
                     );
 
                     let comps: Vec3 = ray_color(&ray_cast_options, &scene, &ray, 0).into();
                     comps
                 })
-                .fold(Vec3::ZERO, |a, b| &a + &b);
-            let color: Color = (&comps / ray_cast_options.sample_count as f32).into();
+                .fold(Vec3::ZERO, |a, b| a + b);
+            let color: Color = (comps / ray_cast_options.sample_count as f32).into();
+
+            // gamma correct (!?)
+            let color = Color::from_rgb(color.r().sqrt(), color.g().sqrt(), color.b().sqrt());
 
             //
             let color = image::Rgb(color.as_u8());
@@ -112,39 +115,57 @@ fn main() -> Result<()> {
 //
 //
 fn make_test_scene() -> Scene {
-    use crate::cgmath::*;
-
+    //
     let mut scene = Scene::new();
 
-    let grey_diffuse = scene.insert_material(Lambertian::new(Color::from_rgb(0.5, 0.5, 0.5)));
+    // ground
+    {
+        let m = scene.insert_material(Lambertian::new(Color::from_rgb(0.8, 0.8, 0.0)));
 
-    let green_metal = scene.insert_material(Metal::new(Color::from_rgb(0.0, 1.0, 0.0), 0.8));
-    let red_metal = scene.insert_material(Metal::new(Color::from_rgb(1.0, 0.0, 0.0), 0.2));
+        let s = scene.insert_shape(Sphere {
+            center: Vec3::new(0.0, -100.5, -1.0),
+            radius: 100.0,
+        });
 
-    let ground = scene.insert_shape(Sphere {
-        center: Vec3::new(0.0, -100.5, -1.0),
-        radius: 100.0,
-    });
+        scene.insert_object(s, m);
+    }
 
-    let s1 = scene.insert_shape(Sphere {
-        center: Vec3::new(0.0, 0.0, -1.0),
-        radius: 0.5,
-    });
+    // center sphere
+    {
+        let m = scene.insert_material(Lambertian::new(Color::from_rgb(0.7, 0.3, 0.3)));
 
-    let s2 = scene.insert_shape(Sphere {
-        center: Vec3::new(1.0, 0.0, -1.0),
-        radius: 0.5,
-    });
+        let s = scene.insert_shape(Sphere {
+            center: Vec3::new(0.0, 0.0, -1.0),
+            radius: 0.5,
+        });
 
-    let s3 = scene.insert_shape(Sphere {
-        center: Vec3::new(-1.0, 0.0, -1.0),
-        radius: 0.5,
-    });
+        scene.insert_object(s, m);
+    }
 
-    scene.insert_object(ground, grey_diffuse);
-    scene.insert_object(s1, grey_diffuse);
-    scene.insert_object(s2, green_metal);
-    scene.insert_object(s3, red_metal);
+    // left sphere
+    {
+        let m = scene.insert_material(Metal::new(Color::from_rgb(0.8, 0.8, 0.8), 0.3));
 
+        let s = scene.insert_shape(Sphere {
+            center: Vec3::new(-1.0, 0.0, -1.0),
+            radius: 0.5,
+        });
+
+        scene.insert_object(s, m);
+    }
+
+    // right sphere
+    {
+        let m = scene.insert_material(Metal::new(Color::from_rgb(0.8, 0.6, 0.2), 1.0));
+
+        let s = scene.insert_shape(Sphere {
+            center: Vec3::new(1.0, 0.0, -1.0),
+            radius: 0.5,
+        });
+
+        scene.insert_object(s, m);
+    }
+
+    //
     scene
 }
