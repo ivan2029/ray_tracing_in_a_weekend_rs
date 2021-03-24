@@ -1,5 +1,7 @@
 use std::ops::{Add, Mul, Sub};
 
+use rand::{thread_rng, Rng};
+
 use crate::cgmath::Vec3;
 
 #[derive(Debug, Clone, Copy)]
@@ -36,6 +38,14 @@ impl Color {
 
     pub fn b(&self) -> f32 {
         self.b
+    }
+
+    pub fn random() -> Color {
+        Color {
+            r: thread_rng().gen_range(0.0..1.0),
+            g: thread_rng().gen_range(0.0..1.0),
+            b: thread_rng().gen_range(0.0..1.0),
+        }
     }
 }
 
@@ -80,5 +90,16 @@ impl Mul<Color> for f32 {
     type Output = Color;
     fn mul(self, c: Color) -> Color {
         c * self
+    }
+}
+
+impl Mul for Color {
+    type Output = Color;
+    fn mul(self, c: Color) -> Color {
+        Color {
+            r: self.r * c.r,
+            g: self.g * c.g,
+            b: self.b * c.b,
+        }
     }
 }

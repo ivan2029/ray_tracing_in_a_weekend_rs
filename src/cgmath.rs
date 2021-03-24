@@ -189,11 +189,12 @@ impl Vec3 {
 
     ///
     pub fn random_in_unit_sphere() -> Vec3 {
-        let mut v = Vec3::random_range(-1.0..1.0);
-        while v.norm_squared() > 1.0 {
-            v = Vec3::random_range(-1.0..1.0);
+        loop {
+            let v = Vec3::random_range(-1.0..1.0);
+            if v.norm_squared() < 1.0 {
+                return v;
+            }
         }
-        v
     }
 
     ///
@@ -208,6 +209,20 @@ impl Vec3 {
             u
         } else {
             -u
+        }
+    }
+
+    ///
+    pub fn random_in_unit_disk() -> Vec3 {
+        loop {
+            let v = Vec3::new(
+                thread_rng().gen_range(-1.0..1.0),
+                thread_rng().gen_range(-1.0..1.0),
+                0.0,
+            );
+            if v.norm_squared() < 1.0 {
+                return v;
+            }
         }
     }
 }

@@ -39,10 +39,13 @@ impl HittableShape for Sphere {
             return None;
         }
 
+        //
         let point = ray.at(t);
-        let normal = (point - self.center).normalized();
+        let normal = self.radius.signum() * (point - self.center).normalized();
 
-        let is_front_face = (self.center - *ray.origin()).norm() > self.radius;
+        let is_front_face = Vec3::dot(normal, *ray.direction()) < 0.0;
+
+        let normal = if is_front_face { normal } else { -normal };
 
         Some(ShapeHit {
             point,

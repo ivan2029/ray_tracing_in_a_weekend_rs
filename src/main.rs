@@ -1,3 +1,4 @@
+mod camera;
 mod cgmath;
 mod color;
 mod material;
@@ -6,40 +7,51 @@ mod raytrace;
 mod scene;
 mod shape;
 
+use crate::camera::*;
 use crate::cgmath::*;
 use crate::color::*;
 use crate::material::*;
-use crate::ray::*;
 use crate::raytrace::*;
 use crate::scene::*;
 use crate::shape::*;
 
 use anyhow::Result;
 use image::{ImageBuffer, Rgb};
+use rand::{thread_rng, Rng};
 use rayon::prelude::*;
 
 use std::{sync::mpsc, thread};
 
 fn main() -> Result<()> {
     // image
-    let aspect_ratio = 16.0 / 9.0;
-    let image_width = 1000;
+    let aspect_ratio = 3.0 / 2.0;
+    let image_width = 1200;
     let image_height = (image_width as f32 / aspect_ratio) as _;
 
     // camera
-    let viewport_height = 2.0;
-    let viewport_width = aspect_ratio * viewport_height;
-    let focal_length = 1.0;
+    let camera = {
+        let eye = Vec3::new(13.0, 2.0, 3.0);
+        let target = Vec3::ZERO;
+        let up = Vec3::Y;
+        let vertical_fov = Degrees(20.0).into();
+        let aperture = 0.1;
+        let focal_distance = 10.0;
 
-    let origin = Vec3::Z * 0.25;
-    let horizontal = viewport_width * Vec3::X;
-    let vertical = viewport_height * Vec3::Y;
-    let lower_left_corner = origin - 0.5 * horizontal - 0.5 * vertical - focal_length * Vec3::Z;
+        Camera::new(
+            eye,
+            target,
+            up,
+            vertical_fov,
+            aspect_ratio,
+            aperture,
+            focal_distance,
+        )
+    };
 
     // raytrace options
     let ray_cast_options = RayCastOptions {
-        sample_count: 100,
-        max_depth: 3,
+        sample_count: 500,
+        max_depth: 50,
     };
 
     // scene
@@ -76,14 +88,10 @@ fn main() -> Result<()> {
             let comps = (0..ray_cast_options.sample_count)
                 .into_iter()
                 .map(|_| {
-                    use rand::Rng;
                     let du = rand::thread_rng().gen_range(-0.5..0.5) / image_width as f32;
                     let dv = rand::thread_rng().gen_range(-0.5..0.5) / image_height as f32;
 
-                    let ray = Ray::new(
-                        origin,
-                        lower_left_corner + (u + du) * horizontal + (v + dv) * vertical - origin,
-                    );
+                    let ray = camera.ray_at(u + du, v + dv);
 
                     let comps: Vec3 = ray_color(&ray_cast_options, &scene, &ray, 0).into();
                     comps
@@ -119,52 +127,85 @@ fn make_test_scene() -> Scene {
 
     // ground
     {
-        let m = scene.insert_material(Lambertian::new(Color::from_rgb(0.8, 0.8, 0.0)));
+        let m = scene.insert_material(Lambertian::new(Color::from_rgb(0.5, 0.5, 0.5)));
 
         let s = scene.insert_shape(Sphere {
-            center: Vec3::new(0.0, -100.5, -1.0),
-            radius: 100.0,
+            center: Vec3::new(0.0, -1000.0, 0.0),
+            radius: 1000.0,
         });
 
         scene.insert_object(s, m);
     }
 
-    // center sphere
+    // predefined spheres
     {
-        let m = scene.insert_material(Lambertian::new(Color::from_rgb(0.1, 0.2, 0.5)));
-        // let m = scene.insert_material(Dielectric::new(1.5));
-
-        let s = scene.insert_shape(Sphere {
-            center: Vec3::new(0.0, 0.0, -1.0),
-            radius: 0.5,
-        });
-
-        scene.insert_object(s, m);
-    }
-
-    // left sphere
-    {
-        //let m = scene.insert_material(Metal::new(Color::from_rgb(0.8, 0.8, 0.8), 0.3));
         let m = scene.insert_material(Dielectric::new(1.5));
-
         let s = scene.insert_shape(Sphere {
-            center: Vec3::new(-1.0, 0.0, -1.0),
-            radius: 0.5,
+            center: Vec3::new(0.0, 1.0, 0.0),
+            radius: 1.0,
         });
 
         scene.insert_object(s, m);
     }
 
-    // right sphere
     {
-        let m = scene.insert_material(Metal::new(Color::from_rgb(0.8, 0.6, 0.2), 1.0));
-
+        let m = scene.insert_material(Lambertian::new(Color::from_rgb(0.4, 0.2, 0.1)));
         let s = scene.insert_shape(Sphere {
-            center: Vec3::new(1.0, 0.0, -1.0),
-            radius: 0.5,
+            center: Vec3::new(-4.0, 1.0, 0.0),
+            radius: 1.0,
         });
 
         scene.insert_object(s, m);
+    }
+
+    {
+        let m = scene.insert_material(Metal::new(Color::from_rgb(0.7, 0.6, 0.5), 0.0));
+        let s = scene.insert_shape(Sphere {
+            center: Vec3::new(4.0, 1.0, 0.0),
+            radius: 1.0,
+        });
+
+        scene.insert_object(s, m);
+    }
+
+    // random spheres
+    {
+        let danger = Vec3::new(4.0, 0.2, 0.0);
+
+        for a in -11..11 {
+            for b in -11..11 {
+                let center = Vec3::new(
+                    a as f32 + 0.9 * thread_rng().gen_range(0.0..1.0),
+                    0.2,
+                    b as f32 + 0.9 * thread_rng().gen_range(0.0..1.0),
+                );
+
+                if (center - danger).norm() < 0.9 {
+                    continue;
+                }
+
+                let m = match thread_rng().gen_range(0..3) {
+                    0 => {
+                        let albedo = Color::random() * Color::random();
+                        scene.insert_material(Lambertian::new(albedo))
+                    }
+                    1 => {
+                        let albedo = Color::from_rgb(0.5, 0.5, 0.5) + 0.5 * Color::random();
+                        let fuzz = thread_rng().gen_range(0.0..0.5);
+                        scene.insert_material(Metal::new(albedo, fuzz))
+                    }
+                    2 => scene.insert_material(Dielectric::new(thread_rng().gen_range(1.1..1.9))),
+                    _ => unreachable!(),
+                };
+
+                let s = scene.insert_shape(Sphere {
+                    center,
+                    radius: 0.2,
+                });
+
+                scene.insert_object(s, m);
+            }
+        }
     }
 
     //

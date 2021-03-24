@@ -81,15 +81,15 @@ impl Material for Lambertian {
         let scatter_direction = {
             let candidate = hit.normal + Vec3::random_unit_vector();
             if candidate.near_zero() {
-                hit.normal.clone()
+                hit.normal
             } else {
                 candidate
             }
         };
 
-        let ray = Ray::new(hit.point.clone(), scatter_direction);
+        let ray = Ray::new(hit.point, scatter_direction);
 
-        let attenuation = self.albedo.clone();
+        let attenuation = self.albedo;
 
         Some(Scatter { attenuation, ray })
     }
@@ -149,23 +149,17 @@ impl Material for Dielectric {
             self.refraction_index
         };
 
-        let normal = if hit.is_front_face {
-            hit.normal
-        } else {
-            -hit.normal
-        };
-
-        let cos_theta = Vec3::dot(-*ray_in.direction(), normal).min(1.0);
-        let sin_theta = (1.0 - cos_theta.powi(2)).sqrt();
+        let cos_theta = Vec3::dot(-*ray_in.direction(), hit.normal).min(1.0);
+        let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
 
         let cannot_refract = refraction_ratio * sin_theta > 1.0;
         let reflectance_too_high =
             reflectance(cos_theta, self.refraction_index) > rand::thread_rng().gen_range(0.0..1.0);
 
         let direction = if cannot_refract || reflectance_too_high {
-            reflect(*ray_in.direction(), normal)
+            reflect(*ray_in.direction(), hit.normal)
         } else {
-            refract(*ray_in.direction(), normal, refraction_ratio)
+            refract(*ray_in.direction(), hit.normal, refraction_ratio)
         };
 
         let ray = Ray::new(hit.point, direction);
