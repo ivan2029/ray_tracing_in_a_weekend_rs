@@ -1,128 +1,7 @@
+use crate::cgmath::angle::*;
+
 use rand::{thread_rng, Rng};
-use std::{
-    f32::consts::{FRAC_1_PI, PI},
-    ops::{Add, Div, Mul, Neg, Range, Sub},
-};
-
-//
-//
-//
-macro_rules! impl_norms {
-    ($vt:tt) => {
-        pub fn norm_squared(self) -> f32 {
-            self.dot(self)
-        }
-
-        pub fn norm(self) -> f32 {
-            self.norm_squared().sqrt()
-        }
-
-        pub fn normalized(self) -> Vec3 {
-            self / self.norm()
-        }
-    };
-}
-
-macro_rules! impl_interpolation {
-    ($vt:tt) => {
-        pub fn lerp(t: f32, u: $vt, v: $vt) -> $vt {
-            (1.0 - t) * u + t * v
-        }
-
-        pub fn quadratic(t: f32, a: $vt, b: $vt, c: $vt) -> $vt {
-            // let ab = lerp(t, a, b);
-            // let bc = lerp(t, b, c);
-            // lerp(t, &ab, &bc)
-            let one_m_t = 1.0 - t;
-            (one_m_t * one_m_t) * a + (2.0 * one_m_t * t) * b + (t * t) * c
-        }
-
-        pub fn cubic(t: f32, a: $vt, b: $vt, c: $vt, d: $vt) -> $vt {
-            // let ab = lerp(t, a, b);
-            // let bc = lerp(t, b, c);
-            // let cd = lerp(t, c, d);
-            // let abc = lerp(t, &ab, &bc);
-            // let bcd = lerp(t, &bc, &cd);
-            // lerp(t, &abc, &bcd)
-            let one_m_t = 1.0 - t;
-            (one_m_t * one_m_t * one_m_t) * a
-                + (3.0 * one_m_t * one_m_t * t) * b
-                + (3.0 * one_m_t * t * t) * c
-                + (t * t * t) * d
-        }
-    };
-}
-
-//
-//
-//
-const FRAC_1_180: f32 = 1.0 / 180.0;
-
-#[derive(Debug, Clone, Copy)]
-#[repr(transparent)]
-pub struct Radians(pub f32);
-
-impl Into<Degrees> for Radians {
-    fn into(self) -> Degrees {
-        Degrees(FRAC_1_PI * 180.0 * self.0)
-    }
-}
-
-impl Add for Radians {
-    type Output = Radians;
-    fn add(self, other: Radians) -> Radians {
-        Radians(self.0 + other.0)
-    }
-}
-
-impl Sub for Radians {
-    type Output = Radians;
-    fn sub(self, other: Radians) -> Radians {
-        Radians(self.0 - other.0)
-    }
-}
-
-impl Neg for Radians {
-    type Output = Radians;
-    fn neg(self) -> Radians {
-        Radians(-self.0)
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-#[repr(transparent)]
-pub struct Degrees(pub f32);
-
-impl Into<Radians> for Degrees {
-    fn into(self) -> Radians {
-        Radians(PI * FRAC_1_180 * self.0)
-    }
-}
-
-impl Add for Degrees {
-    type Output = Degrees;
-    fn add(self, other: Degrees) -> Degrees {
-        Degrees(self.0 + other.0)
-    }
-}
-
-impl Sub for Degrees {
-    type Output = Degrees;
-    fn sub(self, other: Degrees) -> Degrees {
-        Degrees(self.0 - other.0)
-    }
-}
-
-impl Neg for Degrees {
-    type Output = Degrees;
-    fn neg(self) -> Degrees {
-        Degrees(-self.0)
-    }
-}
-
-//
-//
-//
+use std::ops::{Add, Div, Mul, Neg, Range, Sub};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Vec3 {
@@ -148,8 +27,43 @@ impl Vec3 {
         }
     }
 
-    impl_norms!(Self);
-    impl_interpolation!(Self);
+    pub fn norm_squared(self) -> f32 {
+        self.dot(self)
+    }
+
+    pub fn norm(self) -> f32 {
+        self.norm_squared().sqrt()
+    }
+
+    pub fn normalized(self) -> Vec3 {
+        self / self.norm()
+    }
+
+    pub fn lerp(t: f32, u: Vec3, v: Vec3) -> Vec3 {
+        (1.0 - t) * u + t * v
+    }
+
+    pub fn quadratic(t: f32, a: Vec3, b: Vec3, c: Vec3) -> Vec3 {
+        // let ab = lerp(t, a, b);
+        // let bc = lerp(t, b, c);
+        // lerp(t, &ab, &bc)
+        let one_m_t = 1.0 - t;
+        (one_m_t * one_m_t) * a + (2.0 * one_m_t * t) * b + (t * t) * c
+    }
+
+    pub fn cubic(t: f32, a: Vec3, b: Vec3, c: Vec3, d: Vec3) -> Vec3 {
+        // let ab = lerp(t, a, b);
+        // let bc = lerp(t, b, c);
+        // let cd = lerp(t, c, d);
+        // let abc = lerp(t, &ab, &bc);
+        // let bcd = lerp(t, &bc, &cd);
+        // lerp(t, &abc, &bcd)
+        let one_m_t = 1.0 - t;
+        (one_m_t * one_m_t * one_m_t) * a
+            + (3.0 * one_m_t * one_m_t * t) * b
+            + (3.0 * one_m_t * t * t) * c
+            + (t * t * t) * d
+    }
 
     pub fn near_zero(self) -> bool {
         let precision = 1e-8;

@@ -1,5 +1,5 @@
 use crate::cgmath::*;
-use crate::ray::*;
+use crate::raytracer::ray::*;
 
 //
 //

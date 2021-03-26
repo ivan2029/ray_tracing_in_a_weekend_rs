@@ -1,8 +1,8 @@
 use rand::Rng;
 
 use crate::cgmath::*;
-use crate::color::*;
-use crate::ray::*;
+use crate::raytracer::color::*;
+use crate::raytracer::ray::*;
 
 use std::fmt::Debug;
 
