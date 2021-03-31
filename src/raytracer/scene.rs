@@ -1,5 +1,5 @@
-use crate::material::*;
-use crate::ray::*;
+use crate::raytracer::material::*;
+use crate::raytracer::ray::*;
 
 //
 //
@@ -107,7 +107,7 @@ impl Scene {
             } else {
                 b
             }
-        };
+        }
 
         let hit = (0..self.objects.len())
             .filter_map(|object| {

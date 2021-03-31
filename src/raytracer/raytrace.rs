@@ -1,7 +1,7 @@
 use crate::cgmath::*;
-use crate::color::*;
-use crate::ray::*;
-use crate::scene::*;
+use crate::raytracer::color::*;
+use crate::raytracer::ray::*;
+use crate::raytracer::scene::*;
 
 pub struct RayCastOptions {
     pub sample_count: usize,

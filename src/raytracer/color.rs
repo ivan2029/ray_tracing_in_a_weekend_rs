@@ -1,8 +1,7 @@
-use std::ops::{Add, Mul, Sub};
+use crate::cgmath::*;
 
 use rand::{thread_rng, Rng};
-
-use crate::cgmath::Vec3;
+use std::ops::{Add, Mul, Sub};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Color {
