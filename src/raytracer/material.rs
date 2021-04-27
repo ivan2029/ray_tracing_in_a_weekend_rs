@@ -10,7 +10,10 @@ use std::fmt::Debug;
 //
 //
 
-fn reflect(u: Vec3, normal: Vec3) -> Vec3 {
+fn reflect(
+    u: Vec3,
+    normal: Vec3,
+) -> Vec3 {
     u - (2.0 * Vec3::dot(u, normal)) * normal
 }
 
@@ -27,7 +30,11 @@ fn reflect(u: Vec3, normal: Vec3) -> Vec3 {
  *
  *  `index` is `eta / eta'`
  */
-fn refract(u: Vec3, normal: Vec3, refraction_ratio: f32) -> Vec3 {
+fn refract(
+    u: Vec3,
+    normal: Vec3,
+    refraction_ratio: f32,
+) -> Vec3 {
     let cos_theta = Vec3::angle(-u, normal).0.min(1.0);
     let r_out_perp = refraction_ratio * (u + cos_theta * normal);
     let r_out_parallel = {
@@ -42,7 +49,10 @@ fn refract(u: Vec3, normal: Vec3, refraction_ratio: f32) -> Vec3 {
 /*
  * Schlick approximation
  */
-fn reflectance(cosine: f32, refractive_index: f32) -> f32 {
+fn reflectance(
+    cosine: f32,
+    refractive_index: f32,
+) -> f32 {
     let r = (1.0 - refractive_index) / (1.0 + refractive_index);
     let r = r * r;
     let r = r + (1.0 - r) * (1.0 - cosine).powi(5);
@@ -59,7 +69,11 @@ pub struct Scatter {
 }
 
 pub trait Material: Send + Sync + Debug {
-    fn scatter(&self, ray_in: &Ray, hit: &ShapeHit) -> Option<Scatter>;
+    fn scatter(
+        &self,
+        ray_in: &Ray,
+        hit: &ShapeHit,
+    ) -> Option<Scatter>;
 }
 
 //
@@ -77,7 +91,11 @@ impl Lambertian {
 }
 
 impl Material for Lambertian {
-    fn scatter(&self, _ray_in: &Ray, hit: &ShapeHit) -> Option<Scatter> {
+    fn scatter(
+        &self,
+        _ray_in: &Ray,
+        hit: &ShapeHit,
+    ) -> Option<Scatter> {
         let scatter_direction = {
             let candidate = hit.normal + Vec3::random_unit_vector();
             if candidate.near_zero() {
@@ -105,14 +123,21 @@ pub struct Metal {
 }
 
 impl Metal {
-    pub fn new(albedo: Color, fuzz: f32) -> Metal {
+    pub fn new(
+        albedo: Color,
+        fuzz: f32,
+    ) -> Metal {
         let fuzz = fuzz.clamp(0.0, 1.0);
         Metal { albedo, fuzz }
     }
 }
 
 impl Material for Metal {
-    fn scatter(&self, ray_in: &Ray, hit: &ShapeHit) -> Option<Scatter> {
+    fn scatter(
+        &self,
+        ray_in: &Ray,
+        hit: &ShapeHit,
+    ) -> Option<Scatter> {
         let reflected = reflect(*ray_in.direction(), hit.normal);
         let random = self.fuzz * Vec3::random_in_unit_sphere();
         let scatter_direction = reflected + random;
@@ -140,7 +165,11 @@ impl Dielectric {
 }
 
 impl Material for Dielectric {
-    fn scatter(&self, ray_in: &Ray, hit: &ShapeHit) -> Option<Scatter> {
+    fn scatter(
+        &self,
+        ray_in: &Ray,
+        hit: &ShapeHit,
+    ) -> Option<Scatter> {
         let attenuation = Color::from_rgb(1.0, 1.0, 1.0);
 
         let refraction_ratio = if hit.is_front_face {

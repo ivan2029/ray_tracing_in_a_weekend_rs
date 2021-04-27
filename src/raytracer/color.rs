@@ -11,7 +11,11 @@ pub struct Color {
 }
 
 impl Color {
-    pub fn from_rgb(r: f32, g: f32, b: f32) -> Color {
+    pub fn from_rgb(
+        r: f32,
+        g: f32,
+        b: f32,
+    ) -> Color {
         Color {
             r: r.clamp(0.0, 1.0),
             g: g.clamp(0.0, 1.0),
@@ -66,35 +70,50 @@ impl From<Vec3> for Color {
 
 impl Add for Color {
     type Output = Color;
-    fn add(self, other: Color) -> Color {
+    fn add(
+        self,
+        other: Color,
+    ) -> Color {
         Color::from_rgb(self.r + other.r, self.g + other.g, self.b + other.b)
     }
 }
 
 impl Sub for Color {
     type Output = Color;
-    fn sub(self, other: Color) -> Color {
+    fn sub(
+        self,
+        other: Color,
+    ) -> Color {
         Color::from_rgb(self.r - other.r, self.g - other.g, self.b - other.b)
     }
 }
 
 impl Mul<f32> for Color {
     type Output = Color;
-    fn mul(self, c: f32) -> Color {
+    fn mul(
+        self,
+        c: f32,
+    ) -> Color {
         Color::from_rgb(self.r * c, self.g * c, self.b * c)
     }
 }
 
 impl Mul<Color> for f32 {
     type Output = Color;
-    fn mul(self, c: Color) -> Color {
+    fn mul(
+        self,
+        c: Color,
+    ) -> Color {
         c * self
     }
 }
 
 impl Mul for Color {
     type Output = Color;
-    fn mul(self, c: Color) -> Color {
+    fn mul(
+        self,
+        c: Color,
+    ) -> Color {
         Color {
             r: self.r * c.r,
             g: self.g * c.g,

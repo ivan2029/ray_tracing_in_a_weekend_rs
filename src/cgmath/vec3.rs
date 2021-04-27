@@ -11,15 +11,25 @@ pub struct Vec3 {
 }
 
 impl Vec3 {
-    pub const fn new(x: f32, y: f32, z: f32) -> Vec3 {
+    pub const fn new(
+        x: f32,
+        y: f32,
+        z: f32,
+    ) -> Vec3 {
         Vec3 { x, y, z }
     }
 
-    pub fn dot(self, other: Vec3) -> f32 {
+    pub fn dot(
+        self,
+        other: Vec3,
+    ) -> f32 {
         self.x * other.x + self.y * other.y + self.z * other.z
     }
 
-    pub fn cross(self, other: Vec3) -> Vec3 {
+    pub fn cross(
+        self,
+        other: Vec3,
+    ) -> Vec3 {
         Vec3 {
             x: self.y * other.z - self.z * other.y,
             y: self.z * other.x - self.x * other.z,
@@ -39,11 +49,20 @@ impl Vec3 {
         self / self.norm()
     }
 
-    pub fn lerp(t: f32, u: Vec3, v: Vec3) -> Vec3 {
+    pub fn lerp(
+        t: f32,
+        u: Vec3,
+        v: Vec3,
+    ) -> Vec3 {
         (1.0 - t) * u + t * v
     }
 
-    pub fn quadratic(t: f32, a: Vec3, b: Vec3, c: Vec3) -> Vec3 {
+    pub fn quadratic(
+        t: f32,
+        a: Vec3,
+        b: Vec3,
+        c: Vec3,
+    ) -> Vec3 {
         // let ab = lerp(t, a, b);
         // let bc = lerp(t, b, c);
         // lerp(t, &ab, &bc)
@@ -51,7 +70,13 @@ impl Vec3 {
         (one_m_t * one_m_t) * a + (2.0 * one_m_t * t) * b + (t * t) * c
     }
 
-    pub fn cubic(t: f32, a: Vec3, b: Vec3, c: Vec3, d: Vec3) -> Vec3 {
+    pub fn cubic(
+        t: f32,
+        a: Vec3,
+        b: Vec3,
+        c: Vec3,
+        d: Vec3,
+    ) -> Vec3 {
         // let ab = lerp(t, a, b);
         // let bc = lerp(t, b, c);
         // let cd = lerp(t, c, d);
@@ -70,7 +95,10 @@ impl Vec3 {
         self.x.abs() < precision && self.y.abs() < precision && self.z.abs() < precision
     }
 
-    pub fn angle(self, other: Vec3) -> Radians {
+    pub fn angle(
+        self,
+        other: Vec3,
+    ) -> Radians {
         let rads = self.dot(other) / (self.norm() * other.norm());
         Radians(rads)
     }
@@ -149,7 +177,10 @@ impl Neg for Vec3 {
 
 impl Add for Vec3 {
     type Output = Vec3;
-    fn add(self, other: Vec3) -> Vec3 {
+    fn add(
+        self,
+        other: Vec3,
+    ) -> Vec3 {
         Vec3 {
             x: self.x + other.x,
             y: self.y + other.y,
@@ -160,7 +191,10 @@ impl Add for Vec3 {
 
 impl Sub for Vec3 {
     type Output = Vec3;
-    fn sub(self, other: Vec3) -> Vec3 {
+    fn sub(
+        self,
+        other: Vec3,
+    ) -> Vec3 {
         Vec3 {
             x: self.x - other.x,
             y: self.y - other.y,
@@ -171,7 +205,10 @@ impl Sub for Vec3 {
 
 impl Mul<f32> for Vec3 {
     type Output = Vec3;
-    fn mul(self, c: f32) -> Vec3 {
+    fn mul(
+        self,
+        c: f32,
+    ) -> Vec3 {
         Vec3 {
             x: self.x * c,
             y: self.y * c,
@@ -182,14 +219,20 @@ impl Mul<f32> for Vec3 {
 
 impl Mul<Vec3> for f32 {
     type Output = Vec3;
-    fn mul(self, v: Vec3) -> Vec3 {
+    fn mul(
+        self,
+        v: Vec3,
+    ) -> Vec3 {
         v * self
     }
 }
 
 impl Div<f32> for Vec3 {
     type Output = Vec3;
-    fn div(self, c: f32) -> Vec3 {
+    fn div(
+        self,
+        c: f32,
+    ) -> Vec3 {
         Vec3 {
             x: self.x / c,
             y: self.y / c,

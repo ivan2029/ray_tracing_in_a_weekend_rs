@@ -13,7 +13,10 @@ pub struct Ray {
 }
 
 impl Ray {
-    pub fn new(origin: Vec3, direction: Vec3) -> Ray {
+    pub fn new(
+        origin: Vec3,
+        direction: Vec3,
+    ) -> Ray {
         let direction = direction.normalized();
         Ray { origin, direction }
     }
@@ -26,7 +29,10 @@ impl Ray {
         &self.direction
     }
 
-    pub fn at(&self, t: f32) -> Vec3 {
+    pub fn at(
+        &self,
+        t: f32,
+    ) -> Vec3 {
         self.origin + t * self.direction
     }
 }
@@ -43,5 +49,10 @@ pub struct ShapeHit {
 }
 
 pub trait HittableShape: Sync + Send + Debug {
-    fn hit(&self, ray: &Ray, near: f32, far: f32) -> Option<ShapeHit>;
+    fn hit(
+        &self,
+        ray: &Ray,
+        near: f32,
+        far: f32,
+    ) -> Option<ShapeHit>;
 }

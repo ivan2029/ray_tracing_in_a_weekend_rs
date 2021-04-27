@@ -3,6 +3,7 @@ use crate::raytracer::color::*;
 use crate::raytracer::ray::*;
 use crate::raytracer::scene::*;
 
+#[derive(Clone, Copy)]
 pub struct RayCastOptions {
     pub sample_count: usize,
     pub max_depth: usize,
@@ -17,7 +18,12 @@ impl Default for RayCastOptions {
     }
 }
 
-pub fn ray_color(options: &RayCastOptions, scene: &Scene, ray: &Ray, ray_depth: usize) -> Color {
+pub fn ray_color(
+    options: &RayCastOptions,
+    scene: &Scene,
+    ray: &Ray,
+    ray_depth: usize,
+) -> Color {
     if ray_depth > options.max_depth {
         return Color::from_rgb(0.0, 0.0, 0.0);
     }

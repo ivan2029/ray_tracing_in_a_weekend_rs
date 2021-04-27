@@ -17,14 +17,20 @@ impl Into<Degrees> for Radians {
 
 impl Add for Radians {
     type Output = Radians;
-    fn add(self, other: Radians) -> Radians {
+    fn add(
+        self,
+        other: Radians,
+    ) -> Radians {
         Radians(self.0 + other.0)
     }
 }
 
 impl Sub for Radians {
     type Output = Radians;
-    fn sub(self, other: Radians) -> Radians {
+    fn sub(
+        self,
+        other: Radians,
+    ) -> Radians {
         Radians(self.0 - other.0)
     }
 }
@@ -48,14 +54,20 @@ impl Into<Radians> for Degrees {
 
 impl Add for Degrees {
     type Output = Degrees;
-    fn add(self, other: Degrees) -> Degrees {
+    fn add(
+        self,
+        other: Degrees,
+    ) -> Degrees {
         Degrees(self.0 + other.0)
     }
 }
 
 impl Sub for Degrees {
     type Output = Degrees;
-    fn sub(self, other: Degrees) -> Degrees {
+    fn sub(
+        self,
+        other: Degrees,
+    ) -> Degrees {
         Degrees(self.0 - other.0)
     }
 }

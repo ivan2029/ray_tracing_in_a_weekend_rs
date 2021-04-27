@@ -50,7 +50,10 @@ impl Scene {
         }
     }
 
-    pub fn insert_shape<S>(&mut self, shape: S) -> ShapeId
+    pub fn insert_shape<S>(
+        &mut self,
+        shape: S,
+    ) -> ShapeId
     where
         S: 'static + HittableShape,
     {
@@ -58,7 +61,10 @@ impl Scene {
         ShapeId(self.shapes.len() - 1)
     }
 
-    pub fn insert_material<M>(&mut self, material: M) -> MaterialId
+    pub fn insert_material<M>(
+        &mut self,
+        material: M,
+    ) -> MaterialId
     where
         M: 'static + Material,
     {
@@ -66,7 +72,11 @@ impl Scene {
         MaterialId(self.materials.len() - 1)
     }
 
-    pub fn insert_object(&mut self, shape: ShapeId, material: MaterialId) -> ObjectId {
+    pub fn insert_object(
+        &mut self,
+        shape: ShapeId,
+        material: MaterialId,
+    ) -> ObjectId {
         assert!(shape.0 < self.shapes.len());
         assert!(material.0 < self.materials.len());
 
@@ -75,7 +85,10 @@ impl Scene {
         ObjectId(self.shapes.len() - 1)
     }
 
-    pub fn get_shape(&self, object: ObjectId) -> &dyn HittableShape {
+    pub fn get_shape(
+        &self,
+        object: ObjectId,
+    ) -> &dyn HittableShape {
         assert!(object.0 < self.objects.len());
 
         let object = &self.objects[object.0];
@@ -83,7 +96,10 @@ impl Scene {
         self.shapes[object.shape.0].as_ref()
     }
 
-    pub fn get_material(&self, object: ObjectId) -> &dyn Material {
+    pub fn get_material(
+        &self,
+        object: ObjectId,
+    ) -> &dyn Material {
         assert!(object.0 < self.objects.len());
 
         let object = &self.objects[object.0];
@@ -91,7 +107,12 @@ impl Scene {
         self.materials[object.material.0].as_ref()
     }
 
-    pub fn nearest_hit(&self, ray: &Ray, near: f32, far: f32) -> Option<Hit> {
+    pub fn nearest_hit(
+        &self,
+        ray: &Ray,
+        near: f32,
+        far: f32,
+    ) -> Option<Hit> {
         // horrible linear brute force algorithm
         let inf_hit = Hit {
             object: ObjectId(usize::MAX),
@@ -101,7 +122,10 @@ impl Scene {
             },
         };
 
-        fn choose_nearer(a: Hit, b: Hit) -> Hit {
+        fn choose_nearer(
+            a: Hit,
+            b: Hit,
+        ) -> Hit {
             if a.shape_hit.t < b.shape_hit.t {
                 a
             } else {

@@ -11,7 +11,12 @@ pub struct Sphere {
 }
 
 impl HittableShape for Sphere {
-    fn hit(&self, ray: &Ray, near: f32, far: f32) -> Option<ShapeHit> {
+    fn hit(
+        &self,
+        ray: &Ray,
+        near: f32,
+        far: f32,
+    ) -> Option<ShapeHit> {
         let center_origin = *ray.origin() - self.center;
 
         let a = ray.direction().norm_squared();

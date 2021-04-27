@@ -14,8 +14,8 @@ env_logger = "0.8"
 log = "0.4"
 
 rayon = "1.5"
+crossbeam = "0.8"
+
 image = { version = "0.23", features = ["png"] }
 
-
-winit = "0.24"
-wgpu = "0.7"
+eframe = "0.11"
