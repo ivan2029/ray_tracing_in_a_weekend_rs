@@ -69,6 +69,18 @@ impl App {
         let mut render_clicked = false;
 
         //
+        if let Some(tex_id) = self.tex_id {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                ui.centered_and_justified(|ui| {
+                    ui.image(
+                        tex_id,
+                        egui::Vec2::new(self.image_width as f32, self.image_height as f32),
+                    );
+                })
+            });
+        }
+
+        //
         egui::SidePanel::left("setup_panel", 200.0).show(ctx, |ui| {
             ui.vertical_centered(|ui| {
                 //
@@ -114,17 +126,6 @@ impl App {
             })
         });
 
-        if let Some(tex_id) = self.tex_id {
-            egui::CentralPanel::default().show(ctx, |ui| {
-                ui.centered_and_justified(|ui| {
-                    ui.image(
-                        tex_id,
-                        egui::Vec2::new(self.image_width as f32, self.image_height as f32),
-                    );
-                })
-            });
-        }
-
         if render_clicked {
             self.start_render(frame);
         }
@@ -138,13 +139,6 @@ impl App {
         //
         let next = self.chunk_channel.as_ref().map(|c| c.recv());
         if let Some(Ok(chunk)) = next {
-            log::info!(
-                "Got chunk: x = {:>4}, y = {:>4}, time {:?}",
-                chunk.x,
-                chunk.y,
-                chunk.duration
-            );
-
             self.chunks_received += 1;
 
             //
@@ -170,6 +164,10 @@ impl App {
             }
 
             //
+            if let Some(tex_id) = self.tex_id.clone() {
+                frame.tex_allocator().free(tex_id);
+            }
+
             self.tex_id = Some(
                 frame
                     .tex_allocator()
@@ -179,6 +177,16 @@ impl App {
 
         //
         let mut stop_render_clicked = false;
+
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.centered_and_justified(|ui| {
+                let tex_id = self.tex_id.clone().unwrap();
+                ui.image(
+                    tex_id,
+                    egui::Vec2::new(self.image_width as f32, self.image_height as f32),
+                );
+            })
+        });
 
         egui::SidePanel::left("render_control_panel", 200.0).show(ctx, |ui| {
             ui.label(format!(
@@ -191,16 +199,6 @@ impl App {
             stop_render_clicked = ui.button("Stop render").clicked();
         });
 
-        egui::CentralPanel::default().show(ctx, |ui| {
-            ui.centered_and_justified(|ui| {
-                let tex_id = self.tex_id.clone().unwrap();
-                ui.image(
-                    tex_id,
-                    egui::Vec2::new(self.image_width as f32, self.image_height as f32),
-                );
-            })
-        });
-
         if stop_render_clicked {
             self.stop_render();
         }
@@ -210,8 +208,6 @@ impl App {
         &mut self,
         frame: &mut epi::Frame<'_>,
     ) {
-        log::info!("starting render");
-
         self.state = AppState::Rendering;
 
         //
@@ -265,8 +261,6 @@ impl App {
     }
 
     fn stop_render(&mut self) {
-        log::info!("stopping render");
-
         drop(self.thread_pool.take());
         drop(self.chunk_channel.take());
         self.total_chunk_count = 0;
@@ -349,14 +343,6 @@ fn raytrace_task(
     chunk_size: usize,
 ) {
     //
-    log::info!(
-        "starting raytrace task: with params:\n    w = {}\n    h = {}\n    chunk = {}\n    samples = {}\n    max_depth = {}",
-        image_width, image_height, chunk_size, sample_count, max_depth
-    );
-
-    //
-    use rand::{thread_rng, Rng};
-
     use crate::{
         cgmath::*,
         raytracer::{
@@ -364,6 +350,10 @@ fn raytrace_task(
             raytrace::{ray_color, RayCastOptions},
         },
     };
+
+    use rand::{thread_rng, Rng};
+
+    use rayon::prelude::*;
 
     use std::time::Instant;
 
@@ -390,69 +380,70 @@ fn raytrace_task(
     };
 
     //
-    let scene = &scene;
-
-    rayon::scope(move |s| {
+    let chunks = {
         let x_chunks = (image_width + chunk_size - 1) / chunk_size;
         let y_chunks = (image_height + chunk_size - 1) / chunk_size;
 
+        let mut chunks = Vec::with_capacity(x_chunks * y_chunks);
+
         for y in 0..y_chunks {
             for x in 0..x_chunks {
-                let sender = sender.clone();
-
-                //
-                s.spawn(move |_| {
-                    let mut colors = vec![Color::from_rgb(0.0, 0.0, 0.0); chunk_size * chunk_size];
-
-                    let begin = Instant::now();
-
-                    for j in 0..chunk_size {
-                        for i in 0..chunk_size {
-                            let tx = x * chunk_size + i;
-                            let ty = y * chunk_size + j;
-
-                            if tx >= image_width || ty >= image_height {
-                                continue;
-                            }
-
-                            let u = tx as f32 / (image_width - 1) as f32;
-                            let v = 1.0 - (ty as f32 / (image_height - 1) as f32);
-
-                            let mut comps = Vec3::ZERO;
-                            for _ in 0..sample_count {
-                                let du = thread_rng().gen_range(-0.5..0.5) / image_width as f32;
-                                let dv = thread_rng().gen_range(-0.5..0.5) / image_height as f32;
-
-                                let ray = camera.ray_at(u + du, v + dv);
-
-                                let ray_cast_options = RayCastOptions {
-                                    sample_count: sample_count,
-                                    max_depth: max_depth,
-                                };
-                                comps = comps + ray_color(&ray_cast_options, scene, &ray, 0).into();
-                            }
-
-                            comps = comps / sample_count as f32;
-
-                            // color correction ?
-                            comps.x = comps.x.sqrt();
-                            comps.y = comps.y.sqrt();
-                            comps.z = comps.z.sqrt();
-
-                            colors[j * chunk_size + i] = comps.into();
-                        }
-                    }
-
-                    let end = Instant::now();
-
-                    let _ = sender.send(Chunk {
-                        x,
-                        y,
-                        duration: end - begin,
-                        pixels: colors,
-                    });
-                });
+                chunks.push((x, y));
             }
         }
+
+        chunks
+    };
+
+    chunks.into_par_iter().for_each(|(x, y)| {
+        let mut colors = vec![Color::from_rgb(0.0, 0.0, 0.0); chunk_size * chunk_size];
+
+        let begin = Instant::now();
+
+        for j in 0..chunk_size {
+            for i in 0..chunk_size {
+                let tx = x * chunk_size + i;
+                let ty = y * chunk_size + j;
+
+                if tx >= image_width || ty >= image_height {
+                    continue;
+                }
+
+                let u = tx as f32 / (image_width - 1) as f32;
+                let v = 1.0 - (ty as f32 / (image_height - 1) as f32);
+
+                let mut comps = Vec3::ZERO;
+                for _ in 0..sample_count {
+                    let du = thread_rng().gen_range(-0.5..0.5) / image_width as f32;
+                    let dv = thread_rng().gen_range(-0.5..0.5) / image_height as f32;
+
+                    let ray = camera.ray_at(u + du, v + dv);
+
+                    let ray_cast_options = RayCastOptions {
+                        sample_count: sample_count,
+                        max_depth: max_depth,
+                    };
+                    comps = comps + ray_color(&ray_cast_options, &scene, &ray, 0).into();
+                }
+
+                comps = comps / sample_count as f32;
+
+                // color correction ?
+                comps.x = comps.x.sqrt();
+                comps.y = comps.y.sqrt();
+                comps.z = comps.z.sqrt();
+
+                colors[j * chunk_size + i] = comps.into();
+            }
+        }
+
+        let end = Instant::now();
+
+        let _ = sender.send(Chunk {
+            x,
+            y,
+            duration: end - begin,
+            pixels: colors,
+        });
     });
 }
