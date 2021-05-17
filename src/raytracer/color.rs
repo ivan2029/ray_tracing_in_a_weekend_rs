@@ -1,4 +1,4 @@
-use crate::cgmath::*;
+use crate::cgmath::vec3::*;
 
 use rand::{thread_rng, Rng};
 use std::ops::{Add, Mul, Sub};
@@ -52,18 +52,12 @@ impl Color {
     }
 }
 
-impl Into<Vec3> for Color {
-    fn into(self) -> Vec3 {
-        Vec3::new(self.r, self.g, self.b)
-    }
-}
-
 impl From<Vec3> for Color {
     fn from(components: Vec3) -> Color {
         Color {
-            r: components.x.clamp(0.0, 1.0),
-            g: components.y.clamp(0.0, 1.0),
-            b: components.z.clamp(0.0, 1.0),
+            r: components.x().clamp(0.0, 1.0),
+            g: components.y().clamp(0.0, 1.0),
+            b: components.z().clamp(0.0, 1.0),
         }
     }
 }

@@ -1,0 +1,30 @@
+
++ impl cgmath::point3
++ impl cgmath::normal
++ impl cgmath::matrix3x4
++ impl apply transform for vec3, point3, normal, ray
+
++ impl transform generator ( matrix3x4 and inverse ) for translation
++ impl transform generator ( matrix3x4 and inverse ) for scale
++ impl transform generator ( matrix3x4 and inverse ) for rotation (x, y, z)
++ impl transform generator ( matrix3x4 and inverse ) for rotation around vector
+
+- impl cgmath::AABB (with apply transform)
+
++ replace boxes in Scene with *Defs
+- add transforms to Scene
++ impl SceneBuilder
+
+- impl scene loader using `rhai`
+- impl scenes from book 1
+
+- figure out what's wrong with dielectric
+
+- improve camera interface (consult PBRT)
+- impl OrthographicCamera
+- impl EnvironmentCamera
+
+Later
+
+- impl BVH acceleration structure
+

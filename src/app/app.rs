@@ -1,6 +1,6 @@
 use crate::{
     app::scenes::{scene_creators, SceneCreators},
-    raytracer::color::Color,
+    raytracer::raytrace::{raytrace_task, Chunk},
 };
 
 use eframe::{egui, epi};
@@ -9,24 +9,12 @@ use rayon::{ThreadPool, ThreadPoolBuilder};
 
 use crossbeam::channel;
 
-use std::time::Duration;
-
 //
 //
 //
 enum AppState {
     Setup,
     Rendering,
-}
-
-//
-//
-//
-struct Chunk {
-    x: usize,
-    y: usize,
-    duration: Duration,
-    pixels: Vec<Color>,
 }
 
 //
@@ -87,7 +75,7 @@ impl App {
                 egui::ComboBox::from_label("Select scene")
                     .selected_text(self.selected_scene)
                     .show_ui(ui, |ui| {
-                        for (key, _) in &self.scene_creators {
+                        for key in self.scene_creators.keys() {
                             ui.selectable_value(&mut self.selected_scene, *key, *key);
                         }
                     });
@@ -164,7 +152,7 @@ impl App {
             }
 
             //
-            if let Some(tex_id) = self.tex_id.clone() {
+            if let Some(tex_id) = self.tex_id {
                 frame.tex_allocator().free(tex_id);
             }
 
@@ -247,17 +235,17 @@ impl App {
         let max_depth = self.max_depth;
         let chunk_size = self.chunk_size;
 
-        self.thread_pool.as_ref().unwrap().spawn(move || {
-            raytrace_task(
-                sender,
-                scene,
-                image_width,
-                image_height,
-                sample_count,
-                max_depth,
-                chunk_size,
-            )
-        });
+        // self.thread_pool.as_ref().unwrap().spawn(move || {
+        //     raytrace_task(
+        //         sender,
+        //         &scene,
+        //         image_width,
+        //         image_height,
+        //         sample_count,
+        //         max_depth,
+        //         chunk_size,
+        //     )
+        // });
     }
 
     fn stop_render(&mut self) {
@@ -333,117 +321,3 @@ impl epi::App for App {
 //
 //
 //
-fn raytrace_task(
-    sender: channel::Sender<Chunk>,
-    scene: crate::raytracer::scene::Scene,
-    image_width: usize,
-    image_height: usize,
-    sample_count: usize,
-    max_depth: usize,
-    chunk_size: usize,
-) {
-    //
-    use crate::{
-        cgmath::*,
-        raytracer::{
-            camera::Camera,
-            raytrace::{ray_color, RayCastOptions},
-        },
-    };
-
-    use rand::{thread_rng, Rng};
-
-    use rayon::prelude::*;
-
-    use std::time::Instant;
-
-    //
-    let aspect_ratio = image_width as f32 / image_height as f32;
-
-    let camera = {
-        let eye = Vec3::new(13.0, 2.0, 3.0);
-        let target = Vec3::ZERO;
-        let up = Vec3::Y;
-        let vertical_fov = Degrees(20.0).into();
-        let aperture = 0.1;
-        let focal_distance = 10.0;
-
-        &Camera::new(
-            eye,
-            target,
-            up,
-            vertical_fov,
-            aspect_ratio,
-            aperture,
-            focal_distance,
-        )
-    };
-
-    //
-    let chunks = {
-        let x_chunks = (image_width + chunk_size - 1) / chunk_size;
-        let y_chunks = (image_height + chunk_size - 1) / chunk_size;
-
-        let mut chunks = Vec::with_capacity(x_chunks * y_chunks);
-
-        for y in 0..y_chunks {
-            for x in 0..x_chunks {
-                chunks.push((x, y));
-            }
-        }
-
-        chunks
-    };
-
-    chunks.into_par_iter().for_each(|(x, y)| {
-        let mut colors = vec![Color::from_rgb(0.0, 0.0, 0.0); chunk_size * chunk_size];
-
-        let begin = Instant::now();
-
-        for j in 0..chunk_size {
-            for i in 0..chunk_size {
-                let tx = x * chunk_size + i;
-                let ty = y * chunk_size + j;
-
-                if tx >= image_width || ty >= image_height {
-                    continue;
-                }
-
-                let u = tx as f32 / (image_width - 1) as f32;
-                let v = 1.0 - (ty as f32 / (image_height - 1) as f32);
-
-                let mut comps = Vec3::ZERO;
-                for _ in 0..sample_count {
-                    let du = thread_rng().gen_range(-0.5..0.5) / image_width as f32;
-                    let dv = thread_rng().gen_range(-0.5..0.5) / image_height as f32;
-
-                    let ray = camera.ray_at(u + du, v + dv);
-
-                    let ray_cast_options = RayCastOptions {
-                        sample_count: sample_count,
-                        max_depth: max_depth,
-                    };
-                    comps = comps + ray_color(&ray_cast_options, &scene, &ray, 0).into();
-                }
-
-                comps = comps / sample_count as f32;
-
-                // color correction ?
-                comps.x = comps.x.sqrt();
-                comps.y = comps.y.sqrt();
-                comps.z = comps.z.sqrt();
-
-                colors[j * chunk_size + i] = comps.into();
-            }
-        }
-
-        let end = Instant::now();
-
-        let _ = sender.send(Chunk {
-            x,
-            y,
-            duration: end - begin,
-            pixels: colors,
-        });
-    });
-}

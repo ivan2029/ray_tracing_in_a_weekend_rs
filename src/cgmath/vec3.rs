@@ -1,22 +1,76 @@
-use crate::cgmath::angle::*;
+#![allow(clippy::many_single_char_names)]
+
+use crate::cgmath::{angle::*, normal::NormalizedVec3, point3::Point3, transform::Transform, PRECISION};
 
 use rand::{thread_rng, Rng};
 use std::ops::{Add, Div, Mul, Neg, Range, Sub};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Vec3 {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
+    x: f32,
+    y: f32,
+    z: f32,
 }
 
 impl Vec3 {
-    pub const fn new(
+    pub fn new(
         x: f32,
         y: f32,
         z: f32,
     ) -> Vec3 {
+        assert!(!x.is_nan());
+        assert!(!y.is_nan());
+        assert!(!z.is_nan());
+
         Vec3 { x, y, z }
+    }
+
+    pub fn x(&self) -> f32 {
+        self.x
+    }
+
+    pub fn y(&self) -> f32 {
+        self.y
+    }
+
+    pub fn z(&self) -> f32 {
+        self.z
+    }
+
+    pub fn set_x(
+        &mut self,
+        value: f32,
+    ) {
+        assert!(!value.is_nan());
+        self.x = value;
+    }
+
+    pub fn set_y(
+        &mut self,
+        value: f32,
+    ) {
+        assert!(!value.is_nan());
+        self.y = value;
+    }
+
+    pub fn set_z(
+        &mut self,
+        value: f32,
+    ) {
+        assert!(!value.is_nan());
+        self.z = value;
+    }
+
+    pub fn apply_transform(
+        &self,
+        t: &Transform,
+    ) -> Vec3 {
+        let m = t.forward();
+        Vec3::new(
+            m[0][0] * self.x + m[0][1] * self.y + m[0][2] * self.z + m[0][3],
+            m[1][0] * self.x + m[1][1] * self.y + m[1][2] * self.z + m[1][3],
+            m[2][0] * self.x + m[2][1] * self.y + m[2][2] * self.z + m[2][3],
+        )
     }
 
     pub fn dot(
@@ -30,11 +84,11 @@ impl Vec3 {
         self,
         other: Vec3,
     ) -> Vec3 {
-        Vec3 {
-            x: self.y * other.z - self.z * other.y,
-            y: self.z * other.x - self.x * other.z,
-            z: self.x * other.y - self.y * other.x,
-        }
+        Vec3::new(
+            self.y * other.z - self.z * other.y,
+            self.z * other.x - self.x * other.z,
+            self.x * other.y - self.y * other.x,
+        )
     }
 
     pub fn norm_squared(self) -> f32 {
@@ -45,8 +99,8 @@ impl Vec3 {
         self.norm_squared().sqrt()
     }
 
-    pub fn normalized(self) -> Vec3 {
-        self / self.norm()
+    pub fn normalized(self) -> NormalizedVec3 {
+        NormalizedVec3::from_vec(self)
     }
 
     pub fn lerp(
@@ -90,9 +144,8 @@ impl Vec3 {
             + (t * t * t) * d
     }
 
-    pub fn near_zero(self) -> bool {
-        let precision = 1e-8;
-        self.x.abs() < precision && self.y.abs() < precision && self.z.abs() < precision
+    pub fn is_near_zero(self) -> bool {
+        self.x.abs() < PRECISION && self.y.abs() < PRECISION && self.z.abs() < PRECISION
     }
 
     pub fn angle(
@@ -124,13 +177,13 @@ impl Vec3 {
         }
     }
 
-    pub fn random_unit_vector() -> Vec3 {
+    pub fn random_unit_vector() -> NormalizedVec3 {
         Vec3::random_in_unit_sphere().normalized()
     }
 
-    pub fn random_in_hemisphere(normal: Vec3) -> Vec3 {
-        let u = Vec3::random_unit_vector();
-        if Vec3::dot(u, normal) > 0.0 {
+    pub fn random_in_hemisphere(normal: NormalizedVec3) -> Vec3 {
+        let u = Vec3::random_unit_vector().into();
+        if Vec3::dot(u, normal.into()) > 0.0 {
             u
         } else {
             -u
@@ -153,15 +206,47 @@ impl Vec3 {
 
 // constants
 impl Vec3 {
-    pub const X: Vec3 = Vec3::new(1.0, 0.0, 0.0);
+    pub const X: Vec3 = Vec3 {
+        x: 1.0,
+        y: 0.0,
+        z: 0.0,
+    };
 
-    pub const Y: Vec3 = Vec3::new(0.0, 1.0, 0.0);
+    pub const Y: Vec3 = Vec3 {
+        x: 0.0,
+        y: 1.0,
+        z: 0.0,
+    };
 
-    pub const Z: Vec3 = Vec3::new(0.0, 0.0, 1.0);
+    pub const Z: Vec3 = Vec3 {
+        x: 0.0,
+        y: 0.0,
+        z: 1.0,
+    };
 
-    pub const ZERO: Vec3 = Vec3::new(0.0, 0.0, 0.0);
+    pub const ZERO: Vec3 = Vec3 {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
 
-    pub const ONE: Vec3 = Vec3::new(1.0, 1.0, 1.0);
+    pub const ONE: Vec3 = Vec3 {
+        x: 1.0,
+        y: 1.0,
+        z: 1.0,
+    };
+}
+
+impl From<NormalizedVec3> for Vec3 {
+    fn from(value: NormalizedVec3) -> Vec3 {
+        value.to_vec3()
+    }
+}
+
+impl From<Point3> for Vec3 {
+    fn from(value: Point3) -> Vec3 {
+        value.pos()
+    }
 }
 
 impl Neg for Vec3 {

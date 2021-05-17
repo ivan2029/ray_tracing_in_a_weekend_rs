@@ -1,6 +1,7 @@
 mod app;
 mod cgmath;
 mod raytracer;
+mod utils;
 
 fn init_logger() {
     use env_logger::*;
@@ -12,5 +13,5 @@ fn init_logger() {
 fn main() {
     init_logger();
 
-    eframe::run_native(Box::new(app::App::default()));
+    eframe::run_native(Box::new(app::App::default()), Default::default());
 }

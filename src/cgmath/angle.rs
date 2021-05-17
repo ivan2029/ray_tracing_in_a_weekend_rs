@@ -5,13 +5,17 @@ use std::{
 
 const FRAC_1_180: f32 = 1.0 / 180.0;
 
+/*
+ */
 #[derive(Debug, Clone, Copy)]
 #[repr(transparent)]
 pub struct Radians(pub f32);
 
-impl Into<Degrees> for Radians {
-    fn into(self) -> Degrees {
-        Degrees(FRAC_1_PI * 180.0 * self.0)
+impl From<Degrees> for Radians {
+    fn from(value: Degrees) -> Radians {
+        Radians(
+            PI * FRAC_1_180 * value.0
+        )
     }
 }
 
@@ -42,13 +46,17 @@ impl Neg for Radians {
     }
 }
 
+/*
+*/
 #[derive(Debug, Clone, Copy)]
 #[repr(transparent)]
 pub struct Degrees(pub f32);
 
-impl Into<Radians> for Degrees {
-    fn into(self) -> Radians {
-        Radians(PI * FRAC_1_180 * self.0)
+impl From<Radians> for Degrees {
+    fn from(value: Radians) -> Degrees {
+        Degrees(
+            180.0 * FRAC_1_PI * value.0
+        )
     }
 }
 

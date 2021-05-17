@@ -1,27 +1,51 @@
-use crate::raytracer::material::*;
-use crate::raytracer::ray::*;
+/*
+ */
+use crate::{
+    cgmath::{aabb::AxisAlignedBoundingBox, ray::Ray, transform::Transform},
+    raytracer::{
+        material::{Material, MaterialDef},
+        shape::{HittableShape, ShapeDef, ShapeHit},
+    },
+};
 
-//
-//
-//
-
+/*
+*/
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(transparent)]
 pub struct ShapeId(usize);
 
+/*
+*/
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(transparent)]
 pub struct MaterialId(usize);
 
+/*
+ */
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(transparent)]
+pub struct TransformId(usize);
+
+/*
+*/
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(transparent)]
 pub struct ObjectId(usize);
 
-//
-//
-//
+/*
+ */
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(transparent)]
+pub struct AabbId(usize);
 
+/*
+*/
 #[derive(Debug, Clone)]
 struct Object {
     shape: ShapeId,
     material: MaterialId,
+    transform: TransformId,
+    aabb: AabbId,
 }
 
 #[derive(Debug, Clone)]
@@ -30,59 +54,30 @@ pub struct Hit {
     pub shape_hit: ShapeHit,
 }
 
-//
-//
-//
-
-#[derive(Debug)]
 pub struct Scene {
-    shapes: Vec<Box<dyn HittableShape>>,
-    materials: Vec<Box<dyn Material>>,
+    shapes: Vec<ShapeDef>,
+    materials: Vec<MaterialDef>,
+    transforms: Vec<Transform>,
+    aabbs: Vec<AxisAlignedBoundingBox>,
     objects: Vec<Object>,
 }
 
 impl Scene {
-    pub fn new() -> Scene {
+    fn new(
+        shapes: Vec<ShapeDef>,
+        materials: Vec<MaterialDef>,
+        transforms: Vec<Transform>,
+        aabbs: Vec<AxisAlignedBoundingBox>,
+        objects: Vec<Object>,
+    ) -> Scene {
+        // TODO: construct BVH here
         Scene {
-            shapes: Vec::new(),
-            materials: Vec::new(),
-            objects: Vec::new(),
+            shapes,
+            materials,
+            transforms,
+            aabbs,
+            objects,
         }
-    }
-
-    pub fn insert_shape<S>(
-        &mut self,
-        shape: S,
-    ) -> ShapeId
-    where
-        S: 'static + HittableShape,
-    {
-        self.shapes.push(Box::new(shape));
-        ShapeId(self.shapes.len() - 1)
-    }
-
-    pub fn insert_material<M>(
-        &mut self,
-        material: M,
-    ) -> MaterialId
-    where
-        M: 'static + Material,
-    {
-        self.materials.push(Box::new(material));
-        MaterialId(self.materials.len() - 1)
-    }
-
-    pub fn insert_object(
-        &mut self,
-        shape: ShapeId,
-        material: MaterialId,
-    ) -> ObjectId {
-        assert!(shape.0 < self.shapes.len());
-        assert!(material.0 < self.materials.len());
-
-        self.objects.push(Object { shape, material });
-
-        ObjectId(self.shapes.len() - 1)
     }
 
     pub fn get_shape(
@@ -93,7 +88,7 @@ impl Scene {
 
         let object = &self.objects[object.0];
 
-        self.shapes[object.shape.0].as_ref()
+        &self.shapes[object.shape.0]
     }
 
     pub fn get_material(
@@ -104,7 +99,7 @@ impl Scene {
 
         let object = &self.objects[object.0];
 
-        self.materials[object.material.0].as_ref()
+        &self.materials[object.material.0]
     }
 
     pub fn nearest_hit(
@@ -114,39 +109,83 @@ impl Scene {
         far: f32,
     ) -> Option<Hit> {
         // horrible linear brute force algorithm
-        let inf_hit = Hit {
-            object: ObjectId(usize::MAX),
-            shape_hit: ShapeHit {
-                t: f32::INFINITY,
-                ..Default::default()
-            },
-        };
+        todo!()
+    }
+}
 
-        fn choose_nearer(
-            a: Hit,
-            b: Hit,
-        ) -> Hit {
-            if a.shape_hit.t < b.shape_hit.t {
-                a
-            } else {
-                b
-            }
+#[derive(Debug, Clone)]
+pub struct SceneBuilder {
+    shapes: Vec<ShapeDef>,
+    materials: Vec<MaterialDef>,
+    transforms: Vec<Transform>,
+    aabbs: Vec<AxisAlignedBoundingBox>,
+    objects: Vec<Object>,
+}
+
+impl SceneBuilder {
+    pub fn new() -> SceneBuilder {
+        SceneBuilder {
+            shapes: Vec::new(),
+            materials: Vec::new(),
+            transforms: Vec::new(),
+            aabbs: Vec::new(),
+            objects: Vec::new(),
         }
+    }
 
-        let hit = (0..self.objects.len())
-            .filter_map(|object| {
-                let object = ObjectId(object);
-                let shape = self.get_shape(object);
-                shape
-                    .hit(ray, near, far)
-                    .map(|shape_hit| Hit { object, shape_hit })
-            })
-            .fold(inf_hit, choose_nearer);
+    pub fn build(self) -> Scene {
+        let SceneBuilder {
+            shapes,
+            materials,
+            transforms,
+            aabbs,
+            objects,
+        } = self;
+        Scene::new(shapes, materials, transforms, aabbs, objects)
+    }
 
-        if f32::is_infinite(hit.shape_hit.t) {
-            None
-        } else {
-            Some(hit)
-        }
+    pub fn add_shape(
+        &mut self,
+        shape: ShapeDef,
+    ) -> ShapeId {
+        self.shapes.push(shape);
+        ShapeId(self.shapes.len() - 1)
+    }
+
+    pub fn add_material(
+        &mut self,
+        material: MaterialDef,
+    ) -> MaterialId {
+        self.materials.push(material);
+        MaterialId(self.materials.len() - 1)
+    }
+
+    pub fn add_object(
+        &mut self,
+        shape_id: ShapeId,
+        material_id: MaterialId,
+        transform: Transform,
+    ) -> ObjectId {
+        assert!(shape_id.0 < self.shapes.len());
+        assert!(material_id.0 < self.materials.len());
+
+        //
+        let aabb = self.shapes[shape_id.0].aabb().apply_transform(&transform);
+        self.aabbs.push(aabb);
+        let aabb_id = AabbId(self.aabbs.len() - 1);
+
+        //
+        self.transforms.push(transform);
+        let transform_id = TransformId(self.transforms.len() - 1);
+
+        //
+        self.objects.push(Object {
+            shape: shape_id,
+            material: material_id,
+            transform: transform_id,
+            aabb: aabb_id,
+        });
+
+        ObjectId(self.objects.len() - 1)
     }
 }
